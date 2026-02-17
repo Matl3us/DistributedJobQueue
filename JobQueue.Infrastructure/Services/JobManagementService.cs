@@ -12,7 +12,7 @@ public class JobManagementService(IJobRepository repository) : IJobManagementSer
     public async Task<JobResponse> CreateJob(CreateJobRequest request)
     {
         if (!Enum.TryParse<JobType>(request.Type, out var type))
-            throw new InvalidEnumArgumentException();
+            throw new InvalidEnumArgumentException("Invalid value for job type enum");
 
         var jobDto = new JobCreateDto
         {
