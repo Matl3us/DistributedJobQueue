@@ -1,5 +1,5 @@
 ﻿using JobQueue.Core.Interfaces;
-using JobQueue.Core.Models.DTOs.Requests;
+using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
 using JobQueue.Infrastructure.Database;
@@ -8,13 +8,13 @@ namespace JobQueue.Infrastructure.Repositories;
 
 public class JobRepository(JobContext context) : IJobRepository
 {
-    public async Task<Job> CreateJob(CreateJobRequest request)
+    public async Task<Job> CreateJob(JobCreateDto jobCreateDto)
     {
         var job = new Job
         {
-            Type = request.Type,
+            Type = jobCreateDto.Type,
             Status = JobStatus.Pending,
-            Payload = request.Payload
+            Payload = jobCreateDto.Payload
         };
 
         var result = await context.AddAsync(job);

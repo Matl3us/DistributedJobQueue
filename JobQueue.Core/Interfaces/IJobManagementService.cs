@@ -5,5 +5,5 @@ namespace JobQueue.Core.Interfaces;
 
 public interface IJobManagementService
 {
-    Task<JobDto> CreateJob(CreateJobRequest request);
+    Task<JobResponse> CreateJob(CreateJobRequest request);
 }
