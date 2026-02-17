@@ -25,6 +25,10 @@ public class JobContext(DbContextOptions options) : DbContext(options)
         modelBuilder.Entity<Job>()
             .Property(j => j.CreatedAt)
             .HasDefaultValueSql("now()");
+        
+        modelBuilder.Entity<Job>()
+            .Property(j => j.UpdatedAt)
+            .HasDefaultValueSql("now()");
 
         modelBuilder.Entity<Job>()
             .Property(j => j.Result)
