@@ -1,10 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>dotnet-JobQueue.Worker-489a8faa-82f6-4326-bbe2-1e296d646243</UserSecretsId>
     </PropertyGroup>
 
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\JobQueue.Infrastructure\JobQueue.Infrastructure.csproj"/>
+    </ItemGroup>
 </Project>
