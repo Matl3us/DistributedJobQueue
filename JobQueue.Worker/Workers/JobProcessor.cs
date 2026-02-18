@@ -14,7 +14,7 @@ public class JobProcessor(IServiceProvider serviceProvider) : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var scope = serviceProvider.CreateAsyncScope();
+            await using var scope = serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<JobContext>();
 
             var timestamp = new NpgsqlParameter("timestamp", DateTime.UtcNow.AddMinutes(-10));
