@@ -4,13 +4,19 @@ using JobQueue.Core.Models.DTOs.JobPayloads;
 using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
 using JobQueue.Infrastructure.Database;
+using JobQueue.Worker.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace JobQueue.Worker.Workers;
 
-public class JobProcessor(IServiceProvider serviceProvider) : BackgroundService
+public class JobProcessor(
+    IServiceProvider serviceProvider,
+    IOptions<WorkerOptions> options) : BackgroundService
 {
+    private readonly int _maxJobRetries = options.Value.MaxJobRetries;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -20,12 +26,13 @@ public class JobProcessor(IServiceProvider serviceProvider) : BackgroundService
 
             var timestamp = new NpgsqlParameter("timestamp", DateTime.UtcNow.AddMinutes(-10));
             var now = new NpgsqlParameter("now", DateTime.UtcNow);
+            var maxRetries = new NpgsqlParameter("maxRetries", _maxJobRetries);
             var pendingJob = await context.Jobs
                 .FromSql(
                     $$"""
                           SELECT * FROM public."Jobs" 
                           WHERE ("Status" = 0
-                             OR ("Status" = 3 AND "RetryCount" < 3 AND "NextRetryAt" <= {{now}})
+                             OR ("Status" = 3 AND "RetryCount" < {{maxRetries}} AND "NextRetryAt" <= {{now}})
                              OR ("Status" = 1 AND "UpdatedAt" <= {{timestamp}}))
                           FOR UPDATE SKIP LOCKED LIMIT 1
                       """)
@@ -59,7 +66,7 @@ public class JobProcessor(IServiceProvider serviceProvider) : BackgroundService
                 pendingJob.ErrorMessages += $"Attempt {pendingJob.RetryCount + 1}: {e.Message}\n";
                 pendingJob.Status = JobStatus.Failed;
 
-                if (pendingJob.RetryCount < 3)
+                if (pendingJob.RetryCount < _maxJobRetries)
                 {
                     pendingJob.NextRetryAt = DateTime.UtcNow.AddMinutes(Math.Pow(2, pendingJob.RetryCount));
                     pendingJob.RetryCount++;
