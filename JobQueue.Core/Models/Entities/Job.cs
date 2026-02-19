@@ -11,4 +11,7 @@ public class Job
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? Result { get; set; }
+    public string? ErrorMessages { get; set; }
+    public int RetryCount { get; set; }
+    public DateTime NextRetryAt { get; set; }
 }

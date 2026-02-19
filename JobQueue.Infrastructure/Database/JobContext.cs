@@ -34,5 +34,18 @@ public class JobContext(DbContextOptions options) : DbContext(options)
             .Property(j => j.Result)
             .HasColumnType("jsonb")
             .HasMaxLength(4096);
+
+        modelBuilder.Entity<Job>()
+            .Property(j => j.ErrorMessages)
+            .HasMaxLength(2048);
+
+        modelBuilder.Entity<Job>()
+            .Property(j => j.RetryCount)
+            .HasColumnType("smallint")
+            .HasDefaultValue(0);
+
+        modelBuilder.Entity<Job>()
+            .Property(j => j.NextRetryAt)
+            .HasDefaultValueSql("now()");
     }
 }
