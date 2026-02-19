@@ -61,8 +61,8 @@ public class JobProcessor(
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed to process job: {pendingJob.Id}");
-
+                Console.WriteLine($"Failed to process job: {pendingJob.Id}\nError message: {e.Message}");
+                
                 pendingJob.ErrorMessages += $"Attempt {pendingJob.RetryCount + 1}: {e.Message}\n";
                 pendingJob.Status = JobStatus.Failed;
 
