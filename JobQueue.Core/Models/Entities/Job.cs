@@ -14,4 +14,6 @@ public class Job
     public string? ErrorMessages { get; set; }
     public int RetryCount { get; set; }
     public DateTime NextRetryAt { get; set; }
+
+    public DeadLetterJob DeadLetterJob { get; set; }
 }

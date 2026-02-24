@@ -6,6 +6,7 @@ namespace JobQueue.Infrastructure.Database;
 public class JobContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<Job> Jobs { get; set; }
+    public DbSet<DeadLetterJob> DeadLetterJobs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,5 +48,14 @@ public class JobContext(DbContextOptions options) : DbContext(options)
         modelBuilder.Entity<Job>()
             .Property(j => j.NextRetryAt)
             .HasDefaultValueSql("now()");
+
+        modelBuilder.Entity<DeadLetterJob>()
+            .HasOne(d => d.Job)
+            .WithOne(j => j.DeadLetterJob)
+            .HasForeignKey<DeadLetterJob>(d => d.JobId);
+
+        modelBuilder.Entity<DeadLetterJob>()
+            .Property(d => d.Reason)
+            .HasMaxLength(512);
     }
 }
