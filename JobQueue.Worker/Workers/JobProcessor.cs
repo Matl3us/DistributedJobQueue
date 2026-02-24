@@ -62,16 +62,27 @@ public class JobProcessor(
             catch (Exception e)
             {
                 Console.WriteLine($"Failed to process job: {pendingJob.Id}\nError message: {e.Message}");
-                
+
                 pendingJob.ErrorMessages += $"Attempt {pendingJob.RetryCount + 1}: {e.Message}\n";
                 pendingJob.Status = JobStatus.Failed;
+                pendingJob.RetryCount++;
 
                 if (pendingJob.RetryCount < _maxJobRetries)
                 {
-                    pendingJob.NextRetryAt = DateTime.UtcNow.AddMinutes(Math.Pow(2, pendingJob.RetryCount));
-                    pendingJob.RetryCount++;
+                    pendingJob.NextRetryAt = DateTime.UtcNow.AddSeconds(Math.Pow(2, pendingJob.RetryCount));
 
                     Console.WriteLine($"Next retry for job: {pendingJob.Id} set at {pendingJob.NextRetryAt}");
+                }
+                else
+                {
+                    Console.WriteLine($"Moving job: {pendingJob.Id} to dead letter jobs table");
+
+                    var deadLetterJob = new DeadLetterJob
+                    {
+                        Job = pendingJob,
+                        Reason = "Max number of retries reached"
+                    };
+                    await context.DeadLetterJobs.AddAsync(deadLetterJob, stoppingToken);
                 }
             }
             finally
