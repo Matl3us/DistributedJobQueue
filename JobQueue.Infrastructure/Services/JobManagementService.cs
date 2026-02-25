@@ -33,4 +33,16 @@ public class JobManagementService(IJobRepository repository) : IJobManagementSer
             Result = job.Result
         };
     }
+
+    public async Task<JobsStatusCountResponse> GetJobsCountByAllStatuses()
+    {
+        var dict = await repository.GetJobsCountByAllStatuses();
+        return new JobsStatusCountResponse
+        {
+            PendingJobsCount = dict.GetValueOrDefault(JobStatus.Pending, 0),
+            ProcessingJobsCount = dict.GetValueOrDefault(JobStatus.Processing, 0),
+            CompletedJobsCount = dict.GetValueOrDefault(JobStatus.Completed, 0),
+            FailedJobsCount = dict.GetValueOrDefault(JobStatus.Failed, 0)
+        };
+    }
 }

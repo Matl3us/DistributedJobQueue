@@ -6,4 +6,5 @@ namespace JobQueue.Core.Interfaces;
 public interface IJobManagementService
 {
     Task<JobResponse> CreateJob(CreateJobRequest request);
+    Task<JobsStatusCountResponse> GetJobsCountByAllStatuses();
 }

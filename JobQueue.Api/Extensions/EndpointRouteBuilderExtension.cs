@@ -16,6 +16,13 @@ public static class EndpointRouteBuilderExtension
                 return Results.Created($"/api/jobs/{job.Id}", job);
             });
 
+        routeBuilder.MapGet("/status/count",
+            async (IJobManagementService jobService) =>
+            {
+                var statusesCount = await jobService.GetJobsCountByAllStatuses();
+                return Results.Ok(statusesCount);
+            });
+
         return routeBuilder;
     }
 }
