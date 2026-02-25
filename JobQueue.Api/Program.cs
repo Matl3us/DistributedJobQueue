@@ -6,6 +6,8 @@ using JobQueue.Infrastructure.Repositories;
 using JobQueue.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 
+var allowDashboardFetching = "AllowDashboardFetching";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<JobContext>(options
@@ -17,9 +19,17 @@ builder.Services.AddProblemDetails();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobManagementService, JobManagementService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(allowDashboardFetching,
+        policy => { policy.WithOrigins("http://localhost:5173"); });
+});
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+app.UseCors(allowDashboardFetching);
 
 app.MapGet("/", () => "Hello world!");
 app.MapGroup("/api/jobs")
