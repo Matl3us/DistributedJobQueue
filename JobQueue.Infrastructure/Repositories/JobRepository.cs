@@ -30,6 +30,22 @@ public class JobRepository(JobContext context) : IJobRepository
             .ToDictionaryAsync(k => k.Status, v => v.TotalCount);
     }
 
+    public async Task<IEnumerable<Job>> GetFailedJobsPaginated(int page, int pageSize)
+    {
+        return await context.Jobs.Where(j => j.Status == JobStatus.Failed)
+            .Skip(pageSize * (page - 1))
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<DeadLetterJob>> GetDeadLetterQueueJobsPaginated(int page, int pageSize)
+    {
+        return await context.DeadLetterJobs.Include(d => d.Job)
+            .Skip(pageSize * (page - 1))
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         await context.SaveChangesAsync();

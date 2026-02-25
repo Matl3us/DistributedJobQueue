@@ -23,6 +23,24 @@ public static class EndpointRouteBuilderExtension
                 return Results.Ok(statusesCount);
             });
 
+        routeBuilder.MapGet("/failed",
+            async (IJobManagementService jobService,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 10) =>
+            {
+                var failedJobs = await jobService.GetFailedJobsPaginated(page, pageSize);
+                return Results.Ok(failedJobs);
+            });
+
+        routeBuilder.MapGet("/deadLetterQueue",
+            async (IJobManagementService jobService,
+                [FromQuery] int page = 1,
+                [FromQuery] int pageSize = 10) =>
+            {
+                var deadLetterQueueJobs = await jobService.GetDeadLetterQueueJobsPaginated(page, pageSize);
+                return Results.Ok(deadLetterQueueJobs);
+            });
+
         return routeBuilder;
     }
 }

@@ -45,4 +45,30 @@ public class JobManagementService(IJobRepository repository) : IJobManagementSer
             FailedJobsCount = dict.GetValueOrDefault(JobStatus.Failed, 0)
         };
     }
+
+    public async Task<IEnumerable<FailedJobResponse>> GetFailedJobsPaginated(int page, int pageSize)
+    {
+        var jobs = await repository.GetFailedJobsPaginated(page, pageSize);
+        return jobs.Select(j => new FailedJobResponse
+        {
+            Id = j.Id,
+            Type = j.Type.ToString(),
+            CreatedAt = j.CreatedAt,
+            UpdatedAt = j.UpdatedAt,
+            ErrorMessage = j.ErrorMessages
+        });
+    }
+
+    public async Task<IEnumerable<FailedJobResponse>> GetDeadLetterQueueJobsPaginated(int page, int pageSize)
+    {
+        var jobs = await repository.GetDeadLetterQueueJobsPaginated(page, pageSize);
+        return jobs.Select(j => new FailedJobResponse
+        {
+            Id = j.Id,
+            Type = j.Job.Type.ToString(),
+            CreatedAt = j.Job.CreatedAt,
+            UpdatedAt = j.Job.UpdatedAt,
+            ErrorMessage = j.Job.ErrorMessages
+        });
+    }
 }
