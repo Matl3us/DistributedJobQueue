@@ -15,5 +15,5 @@ public class Job
     public int RetryCount { get; set; }
     public DateTime NextRetryAt { get; set; }
 
-    public DeadLetterJob DeadLetterJob { get; set; }
+    public DeadLetterJob? DeadLetterJob { get; set; }
 }
