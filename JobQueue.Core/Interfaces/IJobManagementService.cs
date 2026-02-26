@@ -9,4 +9,5 @@ public interface IJobManagementService
     Task<JobsStatusCountResponse> GetJobsCountByAllStatuses();
     Task<IEnumerable<FailedJobResponse>> GetFailedJobsPaginated(int page, int pageSize);
     Task<IEnumerable<FailedJobResponse>> GetDeadLetterQueueJobsPaginated(int page, int pageSize);
+    Task<bool> RetryJob(Guid jobId);
 }

@@ -71,4 +71,20 @@ public class JobManagementService(IJobRepository repository) : IJobManagementSer
             ErrorMessage = j.Job.ErrorMessages
         });
     }
+
+    public async Task<bool> RetryJob(Guid jobId)
+    {
+        try
+        {
+            await repository.RemoveJobFromDeadLetterQueue(jobId);
+            var job = await repository.GetJobById(jobId);
+            job.Status = JobStatus.Pending;
+            await repository.SaveChangesAsync();
+            return true;
+        }
+        catch (ArgumentNullException)
+        {
+            return false;
+        }
+    }
 }

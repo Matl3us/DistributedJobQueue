@@ -41,6 +41,16 @@ public static class EndpointRouteBuilderExtension
                 return Results.Ok(deadLetterQueueJobs);
             });
 
+        routeBuilder.MapPost("/{jobId}/retry",
+            async ([FromRoute] Guid jobId,
+                IJobManagementService jobService) =>
+            {
+                var result = await jobService.RetryJob(jobId);
+                return result
+                    ? Results.Ok(new { msg = "Job added to pending queue" })
+                    : Results.BadRequest(new { error = $"There is no job with id: {jobId} in dead letter queue" });
+            });
+
         return routeBuilder;
     }
 }

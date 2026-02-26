@@ -22,6 +22,12 @@ public class JobRepository(JobContext context) : IJobRepository
         return result.Entity;
     }
 
+    public async Task<Job> GetJobById(Guid jobId)
+    {
+        var job = await context.Jobs.SingleOrDefaultAsync(j => j.Id == jobId);
+        return job ?? throw new ArgumentNullException($"Job with id:{jobId} doesn't exist");
+    }
+
     public async Task<Dictionary<JobStatus, int>> GetJobsCountByAllStatuses()
     {
         return await context.Jobs
@@ -44,6 +50,26 @@ public class JobRepository(JobContext context) : IJobRepository
             .Skip(pageSize * (page - 1))
             .Take(pageSize)
             .ToListAsync();
+    }
+
+    public async Task AddJobToDeadLetterQueue(Job job, string reason)
+    {
+        var deadLetterJob = new DeadLetterJob
+        {
+            Job = job,
+            Reason = reason
+        };
+
+        await context.AddAsync(deadLetterJob);
+    }
+
+    public async Task RemoveJobFromDeadLetterQueue(Guid jobId)
+    {
+        var deadLetterJob = await context.DeadLetterJobs.SingleOrDefaultAsync(j => j.JobId == jobId);
+        if (deadLetterJob is null)
+            throw new ArgumentNullException($"Job with id {jobId} not found in a dead letter queue");
+
+        context.DeadLetterJobs.Remove(deadLetterJob);
     }
 
     public async Task SaveChangesAsync()
