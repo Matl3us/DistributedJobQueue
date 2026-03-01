@@ -18,6 +18,8 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobManagementService, JobManagementService>();
+builder.Services.AddSingleton<IRedisExchange, RedisExchange>(r =>
+    new RedisExchange(builder.Configuration.GetConnectionString("Redis")!));
 
 builder.Services.AddCors(options =>
 {
