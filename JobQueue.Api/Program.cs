@@ -5,6 +5,7 @@ using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Repositories;
 using JobQueue.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 var allowDashboardFetching = "AllowDashboardFetching";
 
@@ -18,8 +19,9 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobManagementService, JobManagementService>();
-builder.Services.AddSingleton<IRedisExchange, RedisExchange>(r =>
-    new RedisExchange(builder.Configuration.GetConnectionString("Redis")!));
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
+builder.Services.AddSingleton<IJobRedisQueueManagement, JobRedisQueueManagement>();
 
 builder.Services.AddCors(options =>
 {

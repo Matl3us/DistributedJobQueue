@@ -7,7 +7,8 @@ using JobQueue.Core.Models.Enums;
 
 namespace JobQueue.Infrastructure.Services;
 
-public class JobManagementService(IJobRepository repository) : IJobManagementService
+public class JobManagementService(IJobRepository repository, IJobRedisQueueManagement redisQueue)
+    : IJobManagementService
 {
     public async Task<JobResponse> CreateJob(CreateJobRequest request)
     {
@@ -21,6 +22,8 @@ public class JobManagementService(IJobRepository repository) : IJobManagementSer
         };
         var job = await repository.CreateJob(jobDto);
         await repository.SaveChangesAsync();
+
+        await redisQueue.EnqueueAsync(job.Id);
 
         return new JobResponse
         {

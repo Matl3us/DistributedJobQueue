@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
+using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs.JobPayloads;
 using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
@@ -7,12 +8,12 @@ using JobQueue.Infrastructure.Database;
 using JobQueue.Worker.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 namespace JobQueue.Worker.Workers;
 
 public class JobProcessor(
     IServiceProvider serviceProvider,
+    IJobRedisQueueManagement redisQueue,
     IOptions<WorkerOptions> options) : BackgroundService
 {
     private readonly int _maxJobRetries = options.Value.MaxJobRetries;
@@ -24,62 +25,49 @@ public class JobProcessor(
             await using var scope = serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<JobContext>();
 
-            var timestamp = new NpgsqlParameter("timestamp", DateTime.UtcNow.AddMinutes(-10));
-            var now = new NpgsqlParameter("now", DateTime.UtcNow);
-            var maxRetries = new NpgsqlParameter("maxRetries", _maxJobRetries);
-            var pendingJob = await context.Jobs
-                .FromSql(
-                    $$"""
-                          SELECT * FROM public."Jobs" 
-                          WHERE ("Status" = 0
-                             OR ("Status" = 3 AND "RetryCount" < {{maxRetries}} AND "NextRetryAt" <= {{now}})
-                             OR ("Status" = 1 AND "UpdatedAt" <= {{timestamp}}))
-                          FOR UPDATE SKIP LOCKED LIMIT 1
-                      """)
-                .FirstOrDefaultAsync(stoppingToken);
+            var pendingJob = await redisQueue.MoveToProcessingAsync();
 
             if (pendingJob is null)
-            {
-                await Task.Delay(5000, stoppingToken);
                 continue;
-            }
 
-            Console.WriteLine($"Processing job: {pendingJob.Id}");
+            var job = await context.Jobs.SingleAsync(j => j.Id == pendingJob.Id, stoppingToken);
 
-            pendingJob.Status = JobStatus.Processing;
-            pendingJob.UpdatedAt = DateTime.UtcNow;
+            Console.WriteLine($"Processing job: {job.Id}");
+
+            job.Status = JobStatus.Processing;
+            job.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync(stoppingToken);
-
 
             try
             {
-                var result = await HandleJob(pendingJob);
-                pendingJob.Status = JobStatus.Completed;
-                pendingJob.Result = result;
+                var result = await HandleJob(job);
+                job.Status = JobStatus.Completed;
+                job.Result = result;
 
-                Console.WriteLine($"Successfully processed job: {pendingJob.Id}");
+                Console.WriteLine($"Successfully processed job: {job.Id}");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed to process job: {pendingJob.Id}\nError message: {e.Message}");
+                Console.WriteLine($"Failed to process job: {job.Id}\nError message: {e.Message}");
 
-                pendingJob.ErrorMessages += $"Attempt {pendingJob.RetryCount + 1}: {e.Message}\n";
-                pendingJob.Status = JobStatus.Failed;
-                pendingJob.RetryCount++;
+                job.ErrorMessages += $"Attempt {job.RetryCount + 1}: {e.Message}\n";
+                job.Status = JobStatus.Failed;
+                job.RetryCount++;
 
-                if (pendingJob.RetryCount < _maxJobRetries)
+                if (job.RetryCount < _maxJobRetries)
                 {
-                    pendingJob.NextRetryAt = DateTime.UtcNow.AddSeconds(Math.Pow(2, pendingJob.RetryCount));
+                    job.NextRetryAt = DateTime.UtcNow.AddSeconds(Math.Pow(2, job.RetryCount));
+                    await redisQueue.EnqueueAsync(job.Id);
 
-                    Console.WriteLine($"Next retry for job: {pendingJob.Id} set at {pendingJob.NextRetryAt}");
+                    Console.WriteLine($"Next retry for job: {job.Id} set at {job.NextRetryAt}");
                 }
                 else
                 {
-                    Console.WriteLine($"Moving job: {pendingJob.Id} to dead letter jobs table");
+                    Console.WriteLine($"Moving job: {job.Id} to dead letter jobs table");
 
                     var deadLetterJob = new DeadLetterJob
                     {
-                        Job = pendingJob,
+                        Job = job,
                         Reason = "Max number of retries reached"
                     };
                     await context.DeadLetterJobs.AddAsync(deadLetterJob, stoppingToken);
@@ -87,8 +75,9 @@ public class JobProcessor(
             }
             finally
             {
-                pendingJob.UpdatedAt = DateTime.UtcNow;
+                job.UpdatedAt = DateTime.UtcNow;
                 await context.SaveChangesAsync(stoppingToken);
+                await redisQueue.DequeueProcessingAsync(pendingJob);
             }
         }
     }
@@ -103,6 +92,7 @@ public class JobProcessor(
                     throw new ArgumentNullException(nameof(job.Payload),
                         "Job payload for sending email cannot be empty");
 
+                await Task.Delay(10000);
                 try
                 {
                     JsonSerializer.Deserialize<SendEmailPayload>(job.Payload);
@@ -112,7 +102,6 @@ public class JobProcessor(
                     throw new JsonException("Invalid json format for the sending email payload job");
                 }
 
-                await Task.Delay(10000);
                 return JsonSerializer.Serialize(new { EmailSent = true });
             default:
                 throw new InvalidEnumArgumentException("Invalid job type");
