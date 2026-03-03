@@ -20,6 +20,7 @@ builder.Services.AddSingleton<IJobRedisQueueManagement, JobRedisQueueManagement>
 
 builder.Services.AddHostedService<JobProcessor>();
 builder.Services.AddHostedService<StuckJobsDetector>();
+builder.Services.AddHostedService<DroppedJobsDetector>();
 
 var host = builder.Build();
 host.Run();

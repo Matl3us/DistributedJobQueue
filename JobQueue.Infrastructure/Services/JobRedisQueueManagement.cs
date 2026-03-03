@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs;
+using NRedisStack;
 using StackExchange.Redis;
 
 namespace JobQueue.Infrastructure.Services;
@@ -18,17 +19,16 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
 
     public async Task<ProcessingJob?> MoveToProcessingAsync()
     {
-        var jobId = await _db.ListRightPopAsync(_queue);
+        var jobId = await _db.BRPopAsync(_queue, 5);
 
-        if (jobId.IsNullOrEmpty)
+        if (jobId is null)
             return null;
 
         var job = new ProcessingJob
         {
-            Id = Guid.Parse(jobId.ToString()),
+            Id = Guid.Parse(jobId.Item2.ToString()),
             StartedAt = DateTime.UtcNow
         };
-
         var jobJson = JsonSerializer.Serialize(job);
         await _db.ListLeftPushAsync(_processingQueue, jobJson);
 
