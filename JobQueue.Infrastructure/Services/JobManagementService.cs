@@ -82,6 +82,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             await repository.RemoveJobFromDeadLetterQueue(jobId);
             var job = await repository.GetJobById(jobId);
             job.Status = JobStatus.Pending;
+            await redisQueue.EnqueueAsync(job.Id);
             await repository.SaveChangesAsync();
             return true;
         }
