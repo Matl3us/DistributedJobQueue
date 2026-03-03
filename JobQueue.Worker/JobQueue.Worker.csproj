@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-JobQueue.Worker-489a8faa-82f6-4326-bbe2-1e296d646243</UserSecretsId>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,5 +15,11 @@
 
     <ItemGroup>
         <ProjectReference Include="..\JobQueue.Infrastructure\JobQueue.Infrastructure.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
     </ItemGroup>
 </Project>

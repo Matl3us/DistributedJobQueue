@@ -6,10 +6,31 @@
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres 
- 
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 3s
+      retries: 3 
+      
   redis:
     image: redis:latest
     restart: always
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s 
+      retries: 3
+        
+  worker:
+    build:
+      context: .
+      dockerfile: JobQueue.Worker/Dockerfile 
+    environment:
+      - ConnectionStrings__Database=Host=db;Database=postgres;Username=postgres;Password=postgres
+      - ConnectionStrings__Redis=redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
