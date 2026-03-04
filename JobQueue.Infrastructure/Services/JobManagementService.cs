@@ -15,9 +15,13 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         if (!Enum.TryParse<JobType>(request.Type, out var type))
             throw new InvalidEnumArgumentException("Invalid value for job type enum");
 
+        if (!Enum.TryParse<JobPriority>(request.Priority, out var priority))
+            throw new InvalidEnumArgumentException("Invalid value for job priority enum");
+
         var jobDto = new JobCreateDto
         {
             Type = type,
+            Priority = priority,
             Payload = request.Payload
         };
         var job = await repository.CreateJob(jobDto);
@@ -30,6 +34,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             Id = job.Id,
             Type = job.Type.ToString(),
             Status = job.Status.ToString(),
+            Priority = job.Priority.ToString(),
             Payload = job.Payload,
             CreatedAt = job.CreatedAt,
             UpdatedAt = job.UpdatedAt,
@@ -56,6 +61,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         {
             Id = j.Id,
             Type = j.Type.ToString(),
+            Priority = j.Priority.ToString(),
             CreatedAt = j.CreatedAt,
             UpdatedAt = j.UpdatedAt,
             ErrorMessage = j.ErrorMessages
@@ -69,6 +75,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         {
             Id = j.Id,
             Type = j.Job.Type.ToString(),
+            Priority = j.Job.Priority.ToString(),
             CreatedAt = j.Job.CreatedAt,
             UpdatedAt = j.Job.UpdatedAt,
             ErrorMessage = j.Job.ErrorMessages

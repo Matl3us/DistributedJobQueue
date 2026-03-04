@@ -19,6 +19,10 @@ public class JobContext(DbContextOptions options) : DbContext(options)
             .IsRequired();
 
         modelBuilder.Entity<Job>()
+            .Property(j => j.Priority)
+            .IsRequired();
+
+        modelBuilder.Entity<Job>()
             .Property(j => j.Payload)
             .HasColumnType("jsonb")
             .HasMaxLength(4096);

@@ -7,6 +7,7 @@ public class Job
     public Guid Id { get; set; }
     public JobType Type { get; set; }
     public JobStatus Status { get; set; }
+    public JobPriority Priority { get; set; }
     public string? Payload { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

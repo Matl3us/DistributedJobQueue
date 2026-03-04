@@ -15,6 +15,7 @@ public class JobRepository(JobContext context) : IJobRepository
         {
             Type = jobCreateDto.Type,
             Status = JobStatus.Pending,
+            Priority = jobCreateDto.Priority,
             Payload = jobCreateDto.Payload
         };
 
