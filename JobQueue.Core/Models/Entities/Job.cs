@@ -17,4 +17,6 @@ public class Job
     public DateTime NextRetryAt { get; set; }
 
     public DeadLetterJob? DeadLetterJob { get; set; }
+    public Guid? RecurringJobId { get; set; }
+    public RecurringJob? RecurringJob { get; set; }
 }

@@ -6,6 +6,7 @@ namespace JobQueue.Infrastructure.Database;
 public class JobContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<Job> Jobs { get; set; }
+    public DbSet<RecurringJob> RecurringJobs { get; set; }
     public DbSet<DeadLetterJob> DeadLetterJobs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -52,6 +53,34 @@ public class JobContext(DbContextOptions options) : DbContext(options)
         modelBuilder.Entity<Job>()
             .Property(j => j.NextRetryAt)
             .HasDefaultValueSql("now()");
+
+        modelBuilder.Entity<RecurringJob>()
+            .Property(r => r.Name)
+            .HasMaxLength(512)
+            .IsRequired();
+
+        modelBuilder.Entity<RecurringJob>()
+            .Property(r => r.Type)
+            .IsRequired();
+
+        modelBuilder.Entity<RecurringJob>()
+            .Property(r => r.Payload)
+            .HasColumnType("jsonb")
+            .HasMaxLength(4096);
+
+        modelBuilder.Entity<RecurringJob>()
+            .Property(r => r.CronExpression)
+            .HasMaxLength(256)
+            .IsRequired();
+
+        modelBuilder.Entity<RecurringJob>()
+            .Property(r => r.NextRun)
+            .IsRequired();
+
+        modelBuilder.Entity<RecurringJob>()
+            .HasMany(r => r.Jobs)
+            .WithOne(j => j.RecurringJob)
+            .HasForeignKey(j => j.RecurringJobId);
 
         modelBuilder.Entity<DeadLetterJob>()
             .HasOne(d => d.Job)
