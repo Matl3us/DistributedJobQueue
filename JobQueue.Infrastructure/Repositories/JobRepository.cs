@@ -9,17 +9,32 @@ namespace JobQueue.Infrastructure.Repositories;
 
 public class JobRepository(JobContext context) : IJobRepository
 {
-    public async Task<Job> CreateJob(JobCreateDto jobCreateDto)
+    public async Task<Job> CreateJob(JobCreate jobCreate)
     {
         var job = new Job
         {
-            Type = jobCreateDto.Type,
+            Type = jobCreate.Type,
             Status = JobStatus.Pending,
-            Priority = jobCreateDto.Priority,
-            Payload = jobCreateDto.Payload
+            Priority = jobCreate.Priority,
+            Payload = jobCreate.Payload
         };
 
         var result = await context.AddAsync(job);
+        return result.Entity;
+    }
+
+    public async Task<RecurringJob> CreateRecurringJob(RecurringJobCreate recurringJobCreate)
+    {
+        var recurringJob = new RecurringJob
+        {
+            Name = recurringJobCreate.Name,
+            Type = recurringJobCreate.Type,
+            Payload = recurringJobCreate.Payload,
+            CronExpression = recurringJobCreate.CronExpression,
+            NextRun = recurringJobCreate.NextRun
+        };
+
+        var result = await context.AddAsync(recurringJob);
         return result.Entity;
     }
 
@@ -51,6 +66,12 @@ public class JobRepository(JobContext context) : IJobRepository
             .Skip(pageSize * (page - 1))
             .Take(pageSize)
             .ToListAsync();
+    }
+
+    public async Task<RecurringJob?> GetNextScheduledJob()
+    {
+        return await context.RecurringJobs
+            .FirstOrDefaultAsync(r => r.NextRun <= DateTime.UtcNow);
     }
 
     public async Task AddJobToDeadLetterQueue(Job job, string reason)

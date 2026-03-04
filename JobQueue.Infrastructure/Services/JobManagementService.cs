@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using Cronos;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.DTOs.Requests;
@@ -18,7 +19,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         if (!Enum.TryParse<JobPriority>(request.Priority, out var priority))
             throw new InvalidEnumArgumentException("Invalid value for job priority enum");
 
-        var jobDto = new JobCreateDto
+        var jobDto = new JobCreate
         {
             Type = type,
             Priority = priority,
@@ -39,6 +40,40 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             CreatedAt = job.CreatedAt,
             UpdatedAt = job.UpdatedAt,
             Result = job.Result
+        };
+    }
+
+    public async Task<RecurringJobResponse> CreateRecurringJob(CreateRecurringJobRequest request)
+    {
+        if (!Enum.TryParse<JobType>(request.Type, out var type))
+            throw new InvalidEnumArgumentException("Invalid value for job type enum");
+
+        if (!CronExpression.TryParse(request.CronExpression, out var cronExpr))
+            throw new CronFormatException("Invalid value for recurring job cron expression");
+
+        var nextRun = cronExpr.GetNextOccurrence(DateTime.UtcNow)
+                      ?? throw new CronFormatException("Recurring job doesn't have next occurence");
+
+        var recurringJobDto = new RecurringJobCreate
+        {
+            Name = request.Name,
+            Type = type,
+            Payload = request.Payload,
+            CronExpression = request.CronExpression,
+            NextRun = nextRun
+        };
+        var recurringJob = await repository.CreateRecurringJob(recurringJobDto);
+        await repository.SaveChangesAsync();
+
+        return new RecurringJobResponse
+        {
+            Id = recurringJob.Id,
+            Name = recurringJob.Name,
+            Type = recurringJob.Type.ToString(),
+            Payload = recurringJob.Payload,
+            CronExpression = recurringJob.CronExpression,
+            NextRun = recurringJob.NextRun,
+            LastRun = recurringJob.LastRun
         };
     }
 
@@ -80,6 +115,23 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             UpdatedAt = j.Job.UpdatedAt,
             ErrorMessage = j.Job.ErrorMessages
         });
+    }
+
+    public async Task<RecurringJobResponse?> GetNextScheduledJob()
+    {
+        var scheduledJob = await repository.GetNextScheduledJob();
+        return scheduledJob is null
+            ? null
+            : new RecurringJobResponse
+            {
+                Id = scheduledJob.Id,
+                Name = scheduledJob.Name,
+                Type = scheduledJob.Type.ToString(),
+                Payload = scheduledJob.Payload,
+                CronExpression = scheduledJob.CronExpression,
+                NextRun = scheduledJob.NextRun,
+                LastRun = scheduledJob.LastRun
+            };
     }
 
     public async Task<bool> RetryJob(Guid jobId)

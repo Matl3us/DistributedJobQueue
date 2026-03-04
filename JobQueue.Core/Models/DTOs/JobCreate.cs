@@ -2,7 +2,7 @@
 
 namespace JobQueue.Core.Models.DTOs;
 
-public class JobCreateDto
+public class JobCreate
 {
     public JobType Type { get; init; }
     public JobPriority Priority { get; init; }
