@@ -42,7 +42,7 @@ public class DroppedJobsDetector(
                 continue;
             }
 
-            await redisQueue.EnqueueAsync(deletedJob.Id);
+            await redisQueue.EnqueueAsync(deletedJob.Id, deletedJob.Priority);
             deletedJob.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync(stoppingToken);
         }

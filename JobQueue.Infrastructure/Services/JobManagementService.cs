@@ -27,7 +27,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         var job = await repository.CreateJob(jobDto);
         await repository.SaveChangesAsync();
 
-        await redisQueue.EnqueueAsync(job.Id);
+        await redisQueue.EnqueueAsync(job.Id, job.Priority);
 
         return new JobResponse
         {
@@ -89,7 +89,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             await repository.RemoveJobFromDeadLetterQueue(jobId);
             var job = await repository.GetJobById(jobId);
             job.Status = JobStatus.Pending;
-            await redisQueue.EnqueueAsync(job.Id);
+            await redisQueue.EnqueueAsync(job.Id, job.Priority);
             await repository.SaveChangesAsync();
             return true;
         }

@@ -57,7 +57,7 @@ public class JobProcessor(
                 if (job.RetryCount < _maxJobRetries)
                 {
                     job.NextRetryAt = DateTime.UtcNow.AddSeconds(Math.Pow(2, job.RetryCount));
-                    await redisQueue.EnqueueAsync(job.Id);
+                    await redisQueue.EnqueueAsync(job.Id, job.Priority);
 
                     Console.WriteLine($"Next retry for job: {job.Id} set at {job.NextRetryAt}");
                 }

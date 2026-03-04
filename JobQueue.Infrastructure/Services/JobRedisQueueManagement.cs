@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.ComponentModel;
+using System.Text.Json;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs;
+using JobQueue.Core.Models.Enums;
 using NRedisStack;
 using StackExchange.Redis;
 
@@ -9,17 +11,21 @@ namespace JobQueue.Infrastructure.Services;
 public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQueueManagement
 {
     private readonly IDatabase _db = redis.GetDatabase();
+    private readonly int _maxConsecutiveNoLowPrioJob = 5;
     private readonly string _processingQueue = "ProcessingQueue";
-    private readonly string _queue = "queue";
 
-    public async Task EnqueueAsync(Guid jobId)
+    private int _consecutiveNoLowPrioJobCounter;
+
+    public async Task EnqueueAsync(Guid jobId, JobPriority priority)
     {
-        await _db.ListLeftPushAsync(_queue, jobId.ToString());
+        var queue = ConvertToPriorityQueueName(priority);
+        await _db.ListLeftPushAsync(queue, jobId.ToString());
     }
 
     public async Task<ProcessingJob?> MoveToProcessingAsync()
     {
-        var jobId = await _db.BRPopAsync(_queue, 5);
+        var queue = GetQueueNameToCheck();
+        var jobId = await _db.BRPopAsync(queue, 3);
 
         if (jobId is null)
             return null;
@@ -27,6 +33,7 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
         var job = new ProcessingJob
         {
             Id = Guid.Parse(jobId.Item2.ToString()),
+            Queue = queue,
             StartedAt = DateTime.UtcNow
         };
         var jobJson = JsonSerializer.Serialize(job);
@@ -48,7 +55,7 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
                 Console.WriteLine($"Requeuing stuck job: {job.Id}");
 
                 await DequeueProcessingAsync(job);
-                await _db.ListLeftPushAsync(_queue, job.Id.ToString());
+                await _db.ListLeftPushAsync(job.Queue, job.Id.ToString());
             }
         }
     }
@@ -56,5 +63,37 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
     public async Task DequeueProcessingAsync(ProcessingJob job)
     {
         await _db.ListRemoveAsync(_processingQueue, JsonSerializer.Serialize(job));
+    }
+
+    private string ConvertToPriorityQueueName(JobPriority priority)
+    {
+        return priority switch
+        {
+            JobPriority.Low => "queue:low",
+            JobPriority.Normal => "queue:normal",
+            JobPriority.High => "queue:high",
+            _ => throw new InvalidEnumArgumentException()
+        };
+    }
+
+    private string GetQueueNameToCheck()
+    {
+        if (_consecutiveNoLowPrioJobCounter == _maxConsecutiveNoLowPrioJob)
+        {
+            _consecutiveNoLowPrioJobCounter = 0;
+            return "queue:low";
+        }
+
+        var rnd = Random.Shared;
+        var num = rnd.Next(1, 7);
+        if (num == 1)
+        {
+            _consecutiveNoLowPrioJobCounter = 0;
+            return "queue:low";
+        }
+
+        _consecutiveNoLowPrioJobCounter++;
+        if (num > 3) return "queue:high";
+        return "queue:normal";
     }
 }
