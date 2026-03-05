@@ -5,6 +5,7 @@ using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
 using JobQueue.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace JobQueue.Infrastructure.Repositories;
 
@@ -46,11 +47,6 @@ public class JobRepository(JobContext context) : IJobRepository
         return job ?? throw new ArgumentNullException($"Job with id:{jobId} doesn't exist");
     }
 
-    public async Task<RecurringJob?> GetRecurringJobById(Guid recurringJobId)
-    {
-        return await context.RecurringJobs.FirstOrDefaultAsync(r => r.Id == recurringJobId);
-    }
-
     public async Task<Dictionary<JobStatus, int>> GetJobsCountByAllStatuses()
     {
         return await context.Jobs
@@ -75,24 +71,34 @@ public class JobRepository(JobContext context) : IJobRepository
             .ToListAsync();
     }
 
-    public async Task<RecurringJob?> GetNextScheduledJob()
+    public async Task<Guid?> ScheduleRecurringJob()
     {
-        return await context.RecurringJobs
-            .FirstOrDefaultAsync(r => r.NextRun <= DateTime.UtcNow);
-    }
+        try
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            var scheduledJob = await GetNextScheduledJob();
+            if (scheduledJob is null)
+                return null;
 
-    public async Task CalculateNextRunForJob(Guid recurringJobId)
-    {
-        var recurringJob = await context.RecurringJobs.FirstOrDefaultAsync(r => r.Id == recurringJobId);
-        if (recurringJob is null)
-            throw new ArgumentNullException($"Recurring job with id:{recurringJobId} doesn't exist");
+            var jobDto = new JobCreate
+            {
+                Type = scheduledJob.Type,
+                Priority = JobPriority.High,
+                Payload = scheduledJob.Payload,
+                RecurringJobId = scheduledJob.Id
+            };
+            var job = await CreateJob(jobDto);
 
-        var nextRun = CronExpression
-            .Parse(recurringJob.CronExpression)
-            .GetNextOccurrence(DateTime.UtcNow);
+            await CalculateNextRunForJob(scheduledJob.Id);
+            await context.SaveChangesAsync();
 
-        recurringJob.LastRun = recurringJob.NextRun;
-        recurringJob.NextRun = nextRun;
+            await transaction.CommitAsync();
+            return job.Id;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     public async Task AddJobToDeadLetterQueue(Job job, string reason)
@@ -118,5 +124,38 @@ public class JobRepository(JobContext context) : IJobRepository
     public async Task SaveChangesAsync()
     {
         await context.SaveChangesAsync();
+    }
+
+    public async Task<RecurringJob?> GetRecurringJobById(Guid recurringJobId)
+    {
+        return await context.RecurringJobs.FirstOrDefaultAsync(r => r.Id == recurringJobId);
+    }
+
+    private async Task<RecurringJob?> GetNextScheduledJob()
+    {
+        var now = new NpgsqlParameter("now", DateTime.UtcNow);
+        return await context.RecurringJobs
+            .FromSql(
+                $$$"""
+                       SELECT * FROM public."RecurringJobs" 
+                       WHERE "NextRun" <= {{{now}}} 
+                       FOR UPDATE SKIP LOCKED LIMIT 1
+                   """)
+            .FirstOrDefaultAsync();
+    }
+
+    private async Task CalculateNextRunForJob(Guid recurringJobId)
+    {
+        var recurringJob = await context.RecurringJobs.FirstOrDefaultAsync(r => r.Id == recurringJobId);
+        if (recurringJob is null)
+            throw new ArgumentNullException($"Recurring job with id:{recurringJobId} doesn't exist");
+
+
+        var nextRun = CronExpression
+            .Parse(recurringJob.CronExpression)
+            .GetNextOccurrence(DateTime.UtcNow);
+
+        recurringJob.LastRun = recurringJob.NextRun;
+        recurringJob.NextRun = nextRun;
     }
 }

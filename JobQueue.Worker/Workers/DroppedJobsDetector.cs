@@ -24,7 +24,6 @@ public class DroppedJobsDetector(
             var timestamp = new NpgsqlParameter("timestamp", DateTime.UtcNow.AddMinutes(-10));
             var now = new NpgsqlParameter("now", DateTime.UtcNow);
             var maxRetries = new NpgsqlParameter("maxRetries", _maxJobRetries);
-            ;
             var deletedJob = await context.Jobs
                 .FromSql(
                     $$$"""

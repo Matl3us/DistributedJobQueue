@@ -1,5 +1,4 @@
 ﻿using JobQueue.Core.Interfaces;
-using JobQueue.Core.Models.DTOs.Requests;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -14,24 +13,8 @@ public class JobScheduler(IServiceProvider serviceProvider) : BackgroundService
             await using var scope = serviceProvider.CreateAsyncScope();
             var jobService = scope.ServiceProvider.GetRequiredService<IJobManagementService>();
 
-            var scheduledJob = await jobService.GetNextScheduledJob();
-            if (scheduledJob is null)
-            {
-                await Task.Delay(5000, stoppingToken);
-                continue;
-            }
-
-            Console.WriteLine($"Processing recurring job with id: {scheduledJob.Id}");
-
-            var jobRequest = new CreateJobFromRecurringRequest
-            {
-                Type = scheduledJob.Type,
-                Payload = scheduledJob.Payload,
-                RecurringJobId = scheduledJob.Id
-            };
-            await jobService.CreateJobFromRecurring(jobRequest);
-
-            await jobService.CalculateNextRunForJob(scheduledJob.Id);
+            var result = await jobService.ScheduleRecurringJob();
+            if (!result) await Task.Delay(3000, stoppingToken);
         }
     }
 }
