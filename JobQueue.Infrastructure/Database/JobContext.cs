@@ -74,10 +74,6 @@ public class JobContext(DbContextOptions options) : DbContext(options)
             .IsRequired();
 
         modelBuilder.Entity<RecurringJob>()
-            .Property(r => r.NextRun)
-            .IsRequired();
-
-        modelBuilder.Entity<RecurringJob>()
             .HasMany(r => r.Jobs)
             .WithOne(j => j.RecurringJob)
             .HasForeignKey(j => j.RecurringJobId);

@@ -10,7 +10,7 @@ public class RecurringJob
     public string? Payload { get; set; }
     public required string CronExpression { get; set; }
     public DateTime? LastRun { get; set; }
-    public DateTime NextRun { get; set; }
+    public DateTime? NextRun { get; set; }
 
     public ICollection<Job> Jobs { get; } = new List<Job>();
 }

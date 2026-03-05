@@ -8,5 +8,5 @@ public class RecurringJobResponse
     public string? Payload { get; init; }
     public required string CronExpression { get; init; }
     public DateTime? LastRun { get; init; }
-    public DateTime NextRun { get; init; }
+    public DateTime? NextRun { get; init; }
 }
