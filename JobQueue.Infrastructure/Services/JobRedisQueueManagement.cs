@@ -22,6 +22,12 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
         await _db.ListLeftPushAsync(queue, jobId.ToString());
     }
 
+    public async Task EnqueueOnTopAsync(Guid jobId, JobPriority priority)
+    {
+        var queue = ConvertToPriorityQueueName(priority);
+        await _db.ListRightPushAsync(queue, jobId.ToString());
+    }
+
     public async Task<ProcessingJob?> MoveToProcessingAsync()
     {
         var queue = GetQueueNameToCheck();

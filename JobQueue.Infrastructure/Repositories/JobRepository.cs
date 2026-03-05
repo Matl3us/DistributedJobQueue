@@ -1,4 +1,5 @@
-﻿using JobQueue.Core.Interfaces;
+﻿using Cronos;
+using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
@@ -16,7 +17,8 @@ public class JobRepository(JobContext context) : IJobRepository
             Type = jobCreate.Type,
             Status = JobStatus.Pending,
             Priority = jobCreate.Priority,
-            Payload = jobCreate.Payload
+            Payload = jobCreate.Payload,
+            RecurringJobId = jobCreate.RecurringJobId
         };
 
         var result = await context.AddAsync(job);
@@ -42,6 +44,11 @@ public class JobRepository(JobContext context) : IJobRepository
     {
         var job = await context.Jobs.SingleOrDefaultAsync(j => j.Id == jobId);
         return job ?? throw new ArgumentNullException($"Job with id:{jobId} doesn't exist");
+    }
+
+    public async Task<RecurringJob?> GetRecurringJobById(Guid recurringJobId)
+    {
+        return await context.RecurringJobs.FirstOrDefaultAsync(r => r.Id == recurringJobId);
     }
 
     public async Task<Dictionary<JobStatus, int>> GetJobsCountByAllStatuses()
@@ -72,6 +79,20 @@ public class JobRepository(JobContext context) : IJobRepository
     {
         return await context.RecurringJobs
             .FirstOrDefaultAsync(r => r.NextRun <= DateTime.UtcNow);
+    }
+
+    public async Task CalculateNextRunForJob(Guid recurringJobId)
+    {
+        var recurringJob = await context.RecurringJobs.FirstOrDefaultAsync(r => r.Id == recurringJobId);
+        if (recurringJob is null)
+            throw new ArgumentNullException($"Recurring job with id:{recurringJobId} doesn't exist");
+
+        var nextRun = CronExpression
+            .Parse(recurringJob.CronExpression)
+            .GetNextOccurrence(DateTime.UtcNow);
+
+        recurringJob.LastRun = recurringJob.NextRun;
+        recurringJob.NextRun = nextRun;
     }
 
     public async Task AddJobToDeadLetterQueue(Job job, string reason)

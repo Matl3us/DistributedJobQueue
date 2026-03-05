@@ -43,6 +43,24 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         };
     }
 
+    public async Task CreateJobFromRecurring(CreateJobFromRecurringRequest request)
+    {
+        if (!Enum.TryParse<JobType>(request.Type, out var type))
+            throw new InvalidEnumArgumentException("Invalid value for job type enum");
+
+        var jobDto = new JobCreate
+        {
+            Type = type,
+            Priority = JobPriority.High,
+            Payload = request.Payload,
+            RecurringJobId = request.RecurringJobId
+        };
+        var job = await repository.CreateJob(jobDto);
+        await repository.SaveChangesAsync();
+
+        await redisQueue.EnqueueOnTopAsync(job.Id, job.Priority);
+    }
+
     public async Task<RecurringJobResponse> CreateRecurringJob(CreateRecurringJobRequest request)
     {
         if (!Enum.TryParse<JobType>(request.Type, out var type))
@@ -132,6 +150,12 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
                 NextRun = scheduledJob.NextRun,
                 LastRun = scheduledJob.LastRun
             };
+    }
+
+    public async Task CalculateNextRunForJob(Guid recurringJobId)
+    {
+        await repository.CalculateNextRunForJob(recurringJobId);
+        await repository.SaveChangesAsync();
     }
 
     public async Task<bool> RetryJob(Guid jobId)

@@ -4,6 +4,7 @@ using JobQueue.Core.Interfaces;
 using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Repositories;
 using JobQueue.Infrastructure.Services;
+using JobQueue.Infrastructure.Worker;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
@@ -22,6 +23,8 @@ builder.Services.AddScoped<IJobManagementService, JobManagementService>();
 builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
 builder.Services.AddSingleton<IJobRedisQueueManagement, JobRedisQueueManagement>();
+
+builder.Services.AddHostedService<JobScheduler>();
 
 builder.Services.AddCors(options =>
 {
