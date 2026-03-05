@@ -35,8 +35,7 @@ app.UseExceptionHandler();
 
 app.UseCors(allowDashboardFetching);
 
-app.MapGet("/", () => "Hello world!");
-app.MapGroup("/api/jobs")
+app.MapGroup("/api")
     .MapEndpoints();
 
 app.Run();
