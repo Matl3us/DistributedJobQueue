@@ -12,6 +12,7 @@ public interface IJobRepository
     Task<Dictionary<JobStatus, int>> GetJobsCountByAllStatuses();
     Task<IEnumerable<Job>> GetFailedJobsPaginated(int page, int pageSize);
     Task<IEnumerable<DeadLetterJob>> GetDeadLetterQueueJobsPaginated(int page, int pageSize);
+    Task<IEnumerable<RecurringJob>> GetRecurringJobsPaginated(int page, int pageSize);
     Task<Guid?> ScheduleRecurringJob();
     Task AddJobToDeadLetterQueue(Job job, string reason);
     Task RemoveJobFromDeadLetterQueue(Guid jobId);

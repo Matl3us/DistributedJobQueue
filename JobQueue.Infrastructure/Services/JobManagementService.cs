@@ -117,6 +117,21 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         });
     }
 
+    public async Task<IEnumerable<RecurringJobResponse>> GetRecurringJobsPaginated(int page, int pageSize)
+    {
+        var recurringJobs = await repository.GetRecurringJobsPaginated(page, pageSize);
+        return recurringJobs.Select(r => new RecurringJobResponse
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Type = r.Type.ToString(),
+            Payload = r.Payload,
+            CronExpression = r.CronExpression,
+            LastRun = r.LastRun,
+            NextRun = r.NextRun
+        });
+    }
+
     public async Task<bool> ScheduleRecurringJob()
     {
         var jobId = await repository.ScheduleRecurringJob();

@@ -10,6 +10,7 @@ public interface IJobManagementService
     Task<JobsStatusCountResponse> GetJobsCountByAllStatuses();
     Task<IEnumerable<FailedJobResponse>> GetFailedJobsPaginated(int page, int pageSize);
     Task<IEnumerable<FailedJobResponse>> GetDeadLetterQueueJobsPaginated(int page, int pageSize);
+    Task<IEnumerable<RecurringJobResponse>> GetRecurringJobsPaginated(int page, int pageSize);
     Task<bool> ScheduleRecurringJob();
     Task<bool> RetryJob(Guid jobId);
 }

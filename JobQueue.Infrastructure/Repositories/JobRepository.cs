@@ -71,6 +71,13 @@ public class JobRepository(JobContext context) : IJobRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<RecurringJob>> GetRecurringJobsPaginated(int page, int pageSize)
+    {
+        return await context.RecurringJobs.Skip(pageSize * (page - 1))
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
     public async Task<Guid?> ScheduleRecurringJob()
     {
         try
