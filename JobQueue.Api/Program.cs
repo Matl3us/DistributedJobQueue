@@ -6,6 +6,7 @@ using JobQueue.Infrastructure.Repositories;
 using JobQueue.Infrastructure.Services;
 using JobQueue.Infrastructure.Worker;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using StackExchange.Redis;
 
 var allowDashboardFetching = "AllowDashboardFetching";
@@ -14,6 +15,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<JobContext>(options
     => options.UseNpgsql(builder.Configuration.GetConnectionString("Database")));
+
+builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
+    loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
 
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddProblemDetails();

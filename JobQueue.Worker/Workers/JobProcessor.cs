@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Text.Json;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs.JobPayloads;
@@ -14,6 +15,7 @@ namespace JobQueue.Worker.Workers;
 public class JobProcessor(
     IServiceProvider serviceProvider,
     IJobRedisQueueManagement redisQueue,
+    ILogger<JobProcessor> logger,
     IOptions<WorkerOptions> options) : BackgroundService
 {
     private readonly int _maxJobRetries = options.Value.MaxJobRetries;
@@ -27,12 +29,16 @@ public class JobProcessor(
 
             var pendingJob = await redisQueue.MoveToProcessingAsync();
 
+            logger.LogInformation("Started processing pending job {@pendingJob}", pendingJob);
+
             if (pendingJob is null)
+            {
+                logger.LogWarning("Pending job is null");
                 continue;
+            }
 
+            var watch = Stopwatch.StartNew();
             var job = await context.Jobs.SingleAsync(j => j.Id == pendingJob.Id, stoppingToken);
-
-            Console.WriteLine($"Processing job: {job.Id}");
 
             job.Status = JobStatus.Processing;
             job.UpdatedAt = DateTime.UtcNow;
@@ -44,11 +50,14 @@ public class JobProcessor(
                 job.Status = JobStatus.Completed;
                 job.Result = result;
 
-                Console.WriteLine($"Successfully processed job: {job.Id}");
+                watch.Stop();
+                var elapsedMs = watch.ElapsedMilliseconds;
+
+                logger.LogInformation("Successfully processed job: {job} in {Elapsed}", job.Id, elapsedMs);
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Failed to process job: {job.Id}\nError message: {e.Message}");
+                logger.LogInformation("Failed to process job: {job} Error: {@Error}", job.Id, e);
 
                 job.ErrorMessages += $"Attempt {job.RetryCount + 1}: {e.Message}\n";
                 job.Status = JobStatus.Failed;
@@ -59,11 +68,11 @@ public class JobProcessor(
                     job.NextRetryAt = DateTime.UtcNow.AddSeconds(Math.Pow(2, job.RetryCount));
                     await redisQueue.EnqueueAsync(job.Id, job.Priority);
 
-                    Console.WriteLine($"Next retry for job: {job.Id} set at {job.NextRetryAt}");
+                    logger.LogInformation($"Next retry for job: {job.Id} set at {job.NextRetryAt}");
                 }
                 else
                 {
-                    Console.WriteLine($"Moving job: {job.Id} to dead letter jobs table");
+                    logger.LogInformation($"Moving job: {job.Id} to dead letter jobs table");
 
                     var deadLetterJob = new DeadLetterJob
                     {
