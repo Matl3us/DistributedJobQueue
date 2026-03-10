@@ -3,12 +3,15 @@ using System.Text.Json;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.Enums;
+using Microsoft.Extensions.Logging;
 using NRedisStack;
 using StackExchange.Redis;
 
 namespace JobQueue.Infrastructure.Services;
 
-public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQueueManagement
+public class JobRedisQueueManagement(
+    IConnectionMultiplexer redis,
+    ILogger<JobRedisQueueManagement> logger) : IJobRedisQueueManagement
 {
     private readonly IDatabase _db = redis.GetDatabase();
     private readonly int _maxConsecutiveNoLowPrioJob = 5;
@@ -20,12 +23,16 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
     {
         var queue = ConvertToPriorityQueueName(priority);
         await _db.ListLeftPushAsync(queue, jobId.ToString());
+        logger.LogInformation("Job {jobId} enqueued to queue: {queue}", jobId, queue);
+        LogQueueDepth();
     }
 
     public async Task EnqueueOnTopAsync(Guid jobId, JobPriority priority)
     {
         var queue = ConvertToPriorityQueueName(priority);
         await _db.ListRightPushAsync(queue, jobId.ToString());
+        logger.LogInformation("Job {jobId} enqueued on top to queue: {queue}", jobId, queue);
+        LogQueueDepth();
     }
 
     public async Task<ProcessingJob?> MoveToProcessingAsync()
@@ -45,6 +52,9 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
         var jobJson = JsonSerializer.Serialize(job);
         await _db.ListLeftPushAsync(_processingQueue, jobJson);
 
+        logger.LogInformation("Job {jobId} moved to the processing queue from: {queue}", jobId, queue);
+        LogQueueDepth();
+
         return job;
     }
 
@@ -58,10 +68,11 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
 
             if (job?.StartedAt < DateTime.UtcNow.AddMinutes(-10))
             {
-                Console.WriteLine($"Requeuing stuck job: {job.Id}");
-
                 await DequeueProcessingAsync(job);
                 await _db.ListLeftPushAsync(job.Queue, job.Id.ToString());
+
+                logger.LogInformation("Stuck job detected {jobId} and requeued.", job.Id);
+                LogQueueDepth();
             }
         }
     }
@@ -69,6 +80,9 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
     public async Task DequeueProcessingAsync(ProcessingJob job)
     {
         await _db.ListRemoveAsync(_processingQueue, JsonSerializer.Serialize(job));
+
+        logger.LogInformation("Job {job} removed from processing queue", job);
+        LogQueueDepth();
     }
 
     private string ConvertToPriorityQueueName(JobPriority priority)
@@ -101,5 +115,15 @@ public class JobRedisQueueManagement(IConnectionMultiplexer redis) : IJobRedisQu
         _consecutiveNoLowPrioJobCounter++;
         if (num > 3) return "queue:high";
         return "queue:normal";
+    }
+
+    private void LogQueueDepth()
+    {
+        var lowPrioDepth = _db.ListLength("queue:low");
+        var normalPrioDepth = _db.ListLength("queue:normal");
+        var highPrioDepth = _db.ListLength("queue:high");
+        var processingDepth = _db.ListLength("ProcessingQueue");
+        logger.LogInformation(
+            $"Queue depth: [LowPriority]: {lowPrioDepth} [NormalPriority]: {normalPrioDepth} [HighPriority]: {highPrioDepth} [ProcessingQueue]: {processingDepth}");
     }
 }

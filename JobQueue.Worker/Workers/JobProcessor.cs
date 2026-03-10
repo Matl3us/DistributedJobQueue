@@ -29,13 +29,13 @@ public class JobProcessor(
 
             var pendingJob = await redisQueue.MoveToProcessingAsync();
 
-            logger.LogInformation("Started processing pending job {@pendingJob}", pendingJob);
-
             if (pendingJob is null)
             {
-                logger.LogWarning("Pending job is null");
+                logger.LogInformation("No pending jobs available");
                 continue;
             }
+
+            logger.LogInformation("Started processing pending job {@pendingJob}", pendingJob);
 
             var watch = Stopwatch.StartNew();
             var job = await context.Jobs.SingleAsync(j => j.Id == pendingJob.Id, stoppingToken);
