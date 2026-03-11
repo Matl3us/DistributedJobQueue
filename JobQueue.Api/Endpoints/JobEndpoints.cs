@@ -16,6 +16,14 @@ public static class JobEndpoints
                 return Results.Created($"/api/jobs/{job.Id}", job);
             });
 
+        routeBuilder.MapGet("/{jobId}",
+            async ([FromRoute] Guid jobId,
+                IJobManagementService jobService) =>
+            {
+                var job = await jobService.GetJobById(jobId);
+                return Results.Ok(job);
+            });
+
         routeBuilder.MapGet("/status/count",
             async (IJobManagementService jobService) =>
             {

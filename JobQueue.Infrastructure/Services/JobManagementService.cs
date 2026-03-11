@@ -77,6 +77,22 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         };
     }
 
+    public async Task<JobResponse> GetJobById(Guid jobId)
+    {
+        var job = await repository.GetJobById(jobId);
+        return new JobResponse
+        {
+            Id = job.Id,
+            Type = job.Type.ToString(),
+            Status = job.Status.ToString(),
+            Priority = job.Priority.ToString(),
+            Payload = job.Payload,
+            CreatedAt = job.CreatedAt,
+            UpdatedAt = job.UpdatedAt,
+            Result = job.Result
+        };
+    }
+
     public async Task<JobsStatusCountResponse> GetJobsCountByAllStatuses()
     {
         var dict = await repository.GetJobsCountByAllStatuses();
