@@ -2,5 +2,8 @@
 
 public enum JobType
 {
-    SendEmail
+    SendEmail,
+    GeneratePdf,
+    ProcessImage,
+    DeliverWebhook
 }
