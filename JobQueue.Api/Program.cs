@@ -1,6 +1,6 @@
 using JobQueue.Api.ExceptionHandlers;
 using JobQueue.Api.Extensions;
-using JobQueue.Core.Interfaces;
+using JobQueue.Core.Interfaces.Repositories;
 using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;

@@ -1,5 +1,6 @@
 ﻿using Cronos;
 using JobQueue.Core.Interfaces;
+using JobQueue.Core.Interfaces.Repositories;
 using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.DTOs.Requests;
 using JobQueue.Core.Models.DTOs.Responses;
