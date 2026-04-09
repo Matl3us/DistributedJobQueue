@@ -1,7 +1,4 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
-using System.Text.Json;
-using JobQueue.Core.Interfaces;
+﻿using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs.JobPayloads;
 using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
@@ -9,6 +6,9 @@ using JobQueue.Infrastructure.Database;
 using JobQueue.Worker.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace JobQueue.Worker.Workers;
 
@@ -59,7 +59,7 @@ public class JobProcessor(
             {
                 logger.LogInformation("Failed to process job: {job} Error: {@Error}", job.Id, e);
 
-                job.ErrorMessages += $"Attempt {job.RetryCount + 1}: {e.Message}\n";
+                //job.ErrorMessages += $"Attempt {job.RetryCount + 1}: {e.Message}\n";
                 job.Status = JobStatus.Failed;
                 job.RetryCount++;
 

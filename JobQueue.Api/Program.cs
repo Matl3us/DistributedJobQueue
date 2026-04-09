@@ -3,11 +3,7 @@ using JobQueue.Api.Extensions;
 using JobQueue.Core.Interfaces;
 using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Repositories;
-using JobQueue.Infrastructure.Services;
-using JobQueue.Infrastructure.Worker;
 using Microsoft.EntityFrameworkCore;
-using Serilog;
-using StackExchange.Redis;
 
 var allowDashboardFetching = "AllowDashboardFetching";
 
@@ -16,19 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<JobContext>(options
     => options.UseNpgsql(builder.Configuration.GetConnectionString("Database")));
 
-builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
-    loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
-
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddScoped<IJobRepository, JobRepository>();
-builder.Services.AddScoped<IJobManagementService, JobManagementService>();
-builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
-builder.Services.AddSingleton<IJobRedisQueueManagement, JobRedisQueueManagement>();
-
-builder.Services.AddHostedService<JobScheduler>();
+//builder.Services.AddScoped<IJobManagementService, JobManagementService>();
+//builder.Services.AddHostedService<JobScheduler>();
 
 builder.Services.AddCors(options =>
 {

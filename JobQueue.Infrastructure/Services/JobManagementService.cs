@@ -1,10 +1,10 @@
-﻿using System.ComponentModel;
-using Cronos;
+﻿using Cronos;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.DTOs.Requests;
 using JobQueue.Core.Models.DTOs.Responses;
 using JobQueue.Core.Models.Enums;
+using System.ComponentModel;
 
 namespace JobQueue.Infrastructure.Services;
 
@@ -115,7 +115,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             Priority = j.Priority.ToString(),
             CreatedAt = j.CreatedAt,
             UpdatedAt = j.UpdatedAt,
-            ErrorMessage = j.ErrorMessages
+            // ErrorMessage = j.ErrorMessages
         });
     }
 
@@ -129,7 +129,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             Priority = j.Job.Priority.ToString(),
             CreatedAt = j.Job.CreatedAt,
             UpdatedAt = j.Job.UpdatedAt,
-            ErrorMessage = j.Job.ErrorMessages
+            //ErrorMessage = j.Job.ErrorMessages
         });
     }
 

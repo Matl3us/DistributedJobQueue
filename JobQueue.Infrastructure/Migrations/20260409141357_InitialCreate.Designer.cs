@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace JobQueue.Infrastructure.Migrations
 {
     [DbContext(typeof(JobContext))]
-    [Migration("20260304131155_AddRecurringJobsTable")]
-    partial class AddRecurringJobsTable
+    [Migration("20260409141357_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -30,6 +30,11 @@ namespace JobQueue.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
 
                     b.Property<Guid>("JobId")
                         .HasColumnType("uuid");
@@ -58,17 +63,10 @@ namespace JobQueue.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<string>("ErrorMessages")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
-
-                    b.Property<DateTime>("NextRetryAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
+                    b.Property<DateTime?>("NextRetryAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Payload")
-                        .HasMaxLength(4096)
                         .HasColumnType("jsonb");
 
                     b.Property<int>("Priority")
@@ -78,13 +76,12 @@ namespace JobQueue.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Result")
-                        .HasMaxLength(4096)
                         .HasColumnType("jsonb");
 
-                    b.Property<short>("RetryCount")
+                    b.Property<int>("RetryCount")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("smallint")
-                        .HasDefaultValue((short)0);
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -102,6 +99,66 @@ namespace JobQueue.Infrastructure.Migrations
                     b.HasIndex("RecurringJobId");
 
                     b.ToTable("Jobs");
+                });
+
+            modelBuilder.Entity("JobQueue.Core.Models.Entities.JobError", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.ToTable("JobErrors");
+                });
+
+            modelBuilder.Entity("JobQueue.Core.Models.Entities.Outbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("Published")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId")
+                        .IsUnique();
+
+                    b.ToTable("Outbox");
                 });
 
             modelBuilder.Entity("JobQueue.Core.Models.Entities.RecurringJob", b =>
@@ -123,11 +180,10 @@ namespace JobQueue.Infrastructure.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
-                    b.Property<DateTime>("NextRun")
+                    b.Property<DateTime?>("NextRun")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Payload")
-                        .HasMaxLength(4096)
                         .HasColumnType("jsonb");
 
                     b.Property<int>("Type")
@@ -153,14 +209,41 @@ namespace JobQueue.Infrastructure.Migrations
                 {
                     b.HasOne("JobQueue.Core.Models.Entities.RecurringJob", "RecurringJob")
                         .WithMany("Jobs")
-                        .HasForeignKey("RecurringJobId");
+                        .HasForeignKey("RecurringJobId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("RecurringJob");
+                });
+
+            modelBuilder.Entity("JobQueue.Core.Models.Entities.JobError", b =>
+                {
+                    b.HasOne("JobQueue.Core.Models.Entities.Job", "Job")
+                        .WithMany("Errors")
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+                });
+
+            modelBuilder.Entity("JobQueue.Core.Models.Entities.Outbox", b =>
+                {
+                    b.HasOne("JobQueue.Core.Models.Entities.Job", "Job")
+                        .WithOne("Outbox")
+                        .HasForeignKey("JobQueue.Core.Models.Entities.Outbox", "JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
                 });
 
             modelBuilder.Entity("JobQueue.Core.Models.Entities.Job", b =>
                 {
                     b.Navigation("DeadLetterJob");
+
+                    b.Navigation("Errors");
+
+                    b.Navigation("Outbox");
                 });
 
             modelBuilder.Entity("JobQueue.Core.Models.Entities.RecurringJob", b =>
