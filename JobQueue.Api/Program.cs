@@ -1,5 +1,6 @@
 using JobQueue.Api.ExceptionHandlers;
 using JobQueue.Api.Extensions;
+using JobQueue.Application.BackgroundServices;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Interfaces.Repositories;
 using JobQueue.Infrastructure.Database;
@@ -21,6 +22,8 @@ builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IDeadLetterRepository, DeadLetterRepository>();
 builder.Services.AddScoped<IRecurringJobRepository, RecurringJobRepository>();
 builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
+
+builder.Services.AddHostedService<JobScheduler>();
 
 builder.Services.AddCors(options =>
 {
