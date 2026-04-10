@@ -1,4 +1,6 @@
-﻿namespace JobQueue.Core.Models.DTOs.Responses;
+﻿using JobQueue.Core.Models.Entities;
+
+namespace JobQueue.Core.Models.DTOs.Responses;
 
 public class FailedJobResponse
 {
@@ -7,5 +9,5 @@ public class FailedJobResponse
     public required string Priority { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
-    public string? ErrorMessage { get; init; }
+    public ICollection<JobError> Errors { get; init; } = [];
 }

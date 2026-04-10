@@ -1,15 +1,21 @@
 ﻿using Cronos;
 using JobQueue.Core.Interfaces;
 using JobQueue.Core.Interfaces.Repositories;
+using JobQueue.Core.Models;
 using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.DTOs.Requests;
 using JobQueue.Core.Models.DTOs.Responses;
 using JobQueue.Core.Models.Enums;
 using System.ComponentModel;
+using System.Text.Json;
 
 namespace JobQueue.Application.Services;
 
-public class JobManagementService(IJobRepository repository, IJobRedisQueueManagement redisQueue)
+public class JobManagementService(IJobRepository jobRepository,
+    IRecurringJobRepository recurringJobRepository,
+    IOutboxRepository outboxRepository,
+    IDeadLetterRepository deadLetterRepository,
+    IUnitOfWork unitOfWork)
     : IJobManagementService
 {
     public async Task<JobResponse> CreateJob(CreateJobRequest request)
@@ -26,10 +32,18 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             Priority = priority,
             Payload = request.Payload
         };
-        var job = await repository.CreateJob(jobDto);
-        await repository.SaveChangesAsync();
+        var job = jobRepository.Add(jobDto);
 
-        await redisQueue.EnqueueAsync(job.Id, job.Priority);
+        var message = new JobMessage()
+        {
+            Id = job.Id,
+            Type = job.Type,
+            Priority = job.Priority,
+        };
+        var payload = JsonSerializer.Serialize(message);
+        outboxRepository.Add(job.Id, payload);
+
+        await unitOfWork.CommitAsync();
 
         return new JobResponse
         {
@@ -53,7 +67,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             throw new CronFormatException("Invalid value for recurring job cron expression");
 
         var nextRun = cronExpr.GetNextOccurrence(DateTime.UtcNow)
-                      ?? throw new CronFormatException("Recurring job doesn't have next occurence");
+                      ?? throw new InvalidOperationException("Cron expression has no future occurrences");
 
         var recurringJobDto = new RecurringJobCreate
         {
@@ -63,8 +77,8 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             CronExpression = request.CronExpression,
             NextRun = nextRun
         };
-        var recurringJob = await repository.CreateRecurringJob(recurringJobDto);
-        await repository.SaveChangesAsync();
+        var recurringJob = recurringJobRepository.Add(recurringJobDto);
+        await unitOfWork.CommitAsync();
 
         return new RecurringJobResponse
         {
@@ -80,7 +94,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
 
     public async Task<JobResponse> GetJobById(Guid jobId)
     {
-        var job = await repository.GetJobById(jobId);
+        var job = await jobRepository.GetById(jobId);
         return new JobResponse
         {
             Id = job.Id,
@@ -96,7 +110,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
 
     public async Task<JobsStatusCountResponse> GetJobsCountByAllStatuses()
     {
-        var dict = await repository.GetJobsCountByAllStatuses();
+        var dict = await jobRepository.GetCountByStatus();
         return new JobsStatusCountResponse
         {
             PendingJobsCount = dict.GetValueOrDefault(JobStatus.Pending, 0),
@@ -108,7 +122,7 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
 
     public async Task<IEnumerable<FailedJobResponse>> GetFailedJobsPaginated(int page, int pageSize)
     {
-        var jobs = await repository.GetFailedJobsPaginated(page, pageSize);
+        var jobs = await jobRepository.GetFailedPaginated(page, pageSize);
         return jobs.Select(j => new FailedJobResponse
         {
             Id = j.Id,
@@ -116,27 +130,26 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
             Priority = j.Priority.ToString(),
             CreatedAt = j.CreatedAt,
             UpdatedAt = j.UpdatedAt,
-            // ErrorMessage = j.ErrorMessages
+            Errors = j.Errors
         });
     }
 
     public async Task<IEnumerable<FailedJobResponse>> GetDeadLetterQueueJobsPaginated(int page, int pageSize)
     {
-        var jobs = await repository.GetDeadLetterQueueJobsPaginated(page, pageSize);
+        var jobs = await deadLetterRepository.GetPaginated(page, pageSize);
         return jobs.Select(j => new FailedJobResponse
         {
-            Id = j.Id,
+            Id = j.Job.Id,
             Type = j.Job.Type.ToString(),
             Priority = j.Job.Priority.ToString(),
             CreatedAt = j.Job.CreatedAt,
             UpdatedAt = j.Job.UpdatedAt,
-            //ErrorMessage = j.Job.ErrorMessages
         });
     }
 
     public async Task<IEnumerable<RecurringJobResponse>> GetRecurringJobsPaginated(int page, int pageSize)
     {
-        var recurringJobs = await repository.GetRecurringJobsPaginated(page, pageSize);
+        var recurringJobs = await recurringJobRepository.GetPaginated(page, pageSize);
         return recurringJobs.Select(r => new RecurringJobResponse
         {
             Id = r.Id,
@@ -149,48 +162,39 @@ public class JobManagementService(IJobRepository repository, IJobRedisQueueManag
         });
     }
 
-    public async Task<bool> ScheduleRecurringJob()
+    public async Task DeleteRecurringJob(Guid recurringJobId)
     {
-        var jobId = await repository.ScheduleRecurringJob();
-        if (jobId is null)
-            return false;
-
-        await redisQueue.EnqueueOnTopAsync(jobId.Value, JobPriority.High);
-        return true;
+        var recurringJob = await recurringJobRepository.GetById(recurringJobId);
+        recurringJobRepository.Remove(recurringJob);
+        await unitOfWork.CommitAsync();
     }
 
     public async Task<bool> RetryJob(Guid jobId)
     {
         try
         {
-            await repository.RemoveJobFromDeadLetterQueue(jobId);
-            var job = await repository.GetJobById(jobId);
+            var deadLetterJob = await deadLetterRepository.GetByJobId(jobId);
+            var job = deadLetterJob.Job;
+            deadLetterRepository.Remove(deadLetterJob);
             job.Status = JobStatus.Pending;
-            await redisQueue.EnqueueAsync(job.Id, job.Priority);
-            await repository.SaveChangesAsync();
+            job.RetryCount = 0;
+
+            var message = new JobMessage()
+            {
+                Id = job.Id,
+                Type = job.Type,
+                Priority = job.Priority,
+            };
+            var payload = JsonSerializer.Serialize(message);
+            outboxRepository.Add(job.Id, payload);
+
+            await unitOfWork.CommitAsync();
+
             return true;
         }
-        catch (ArgumentNullException)
+        catch (Exception)
         {
             return false;
         }
-    }
-
-    public async Task CreateJobFromRecurring(CreateJobFromRecurringRequest request)
-    {
-        if (!Enum.TryParse<JobType>(request.Type, out var type))
-            throw new InvalidEnumArgumentException("Invalid value for job type enum");
-
-        var jobDto = new JobCreate
-        {
-            Type = type,
-            Priority = JobPriority.High,
-            Payload = request.Payload,
-            RecurringJobId = request.RecurringJobId
-        };
-        var job = await repository.CreateJob(jobDto);
-        await repository.SaveChangesAsync();
-
-        await redisQueue.EnqueueOnTopAsync(job.Id, job.Priority);
     }
 }

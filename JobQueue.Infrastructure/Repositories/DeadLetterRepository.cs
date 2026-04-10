@@ -18,6 +18,12 @@ public class DeadLetterRepository(JobContext context) : IDeadLetterRepository
         context.Add(deadLetterJob);
     }
 
+    public async Task<DeadLetterJob> GetByJobId(Guid jobId)
+    {
+        var deadLetterJob = await context.DeadLetterJobs.SingleOrDefaultAsync(d => d.JobId == jobId);
+        return deadLetterJob ?? throw new ArgumentNullException($"Job with id:{jobId} doesn't exist");
+    }
+
     public async Task<IEnumerable<DeadLetterJob>> GetPaginated(int page, int pageSize)
     {
         return await context.DeadLetterJobs.Include(d => d.Job)

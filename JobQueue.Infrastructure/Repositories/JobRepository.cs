@@ -42,6 +42,7 @@ public class JobRepository(JobContext context) : IJobRepository
     public async Task<IEnumerable<Job>> GetFailedPaginated(int page, int pageSize)
     {
         return await context.Jobs.Where(j => j.Status == JobStatus.Failed)
+            .Include(j => j.Errors)
             .Skip(pageSize * (page - 1))
             .Take(pageSize)
             .ToListAsync();

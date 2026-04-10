@@ -25,6 +25,12 @@ public class RecurringJobRepository(JobContext context) : IRecurringJobRepositor
         return result.Entity;
     }
 
+    public async Task<RecurringJob> GetById(Guid id)
+    {
+        var job = await context.RecurringJobs.SingleOrDefaultAsync(r => r.Id == id);
+        return job ?? throw new ArgumentNullException($"Recurring job with id:{id} doesn't exist");
+    }
+
     public async Task<IEnumerable<RecurringJob>> GetPaginated(int page, int pageSize)
     {
         return await context.RecurringJobs.Skip(pageSize * (page - 1))
