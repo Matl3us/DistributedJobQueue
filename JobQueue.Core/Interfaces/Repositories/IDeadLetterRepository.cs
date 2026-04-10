@@ -4,7 +4,7 @@ namespace JobQueue.Core.Interfaces.Repositories;
 
 public interface IDeadLetterRepository
 {
-    Task Add(Job job, string reason);
+    void Add(Guid jobId, string reason);
     Task<IEnumerable<DeadLetterJob>> GetPaginated(int page, int pageSize);
-    Task Remove(Guid jobId);
+    void Remove(DeadLetterJob deadLetterJob);
 }

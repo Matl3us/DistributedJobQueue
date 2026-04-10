@@ -5,7 +5,9 @@ namespace JobQueue.Core.Interfaces.Repositories;
 
 public interface IRecurringJobRepository
 {
-    Task<RecurringJob> Create(RecurringJobCreate recurringJobCreate);
+    RecurringJob Add(RecurringJobCreate recurringJobCreate);
     Task<IEnumerable<RecurringJob>> GetPaginated(int page, int pageSize);
-    Task<RecurringJob?> GetDueAndUpdateNextRun();
+    Task<RecurringJob?> GetDueAndLock();
+    void UpdateNextRun(RecurringJob recurringJob);
+    void Remove(RecurringJob recurringJob);
 }

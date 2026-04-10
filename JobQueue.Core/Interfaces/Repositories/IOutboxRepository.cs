@@ -4,7 +4,7 @@ namespace JobQueue.Core.Interfaces.Repositories;
 
 public interface IOutboxRepository
 {
-    Task Create(Guid jobId, string payload);
+    void Add(Guid jobId, string payload);
     Task<IEnumerable<Outbox>> GetUnpublished();
-    Task MarkPublished(Guid outboxId);
+    void MarkPublished(Outbox outbox);
 }

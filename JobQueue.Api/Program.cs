@@ -1,5 +1,6 @@
 using JobQueue.Api.ExceptionHandlers;
 using JobQueue.Api.Extensions;
+using JobQueue.Core.Interfaces;
 using JobQueue.Core.Interfaces.Repositories;
 using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Repositories;
@@ -15,9 +16,11 @@ builder.Services.AddDbContext<JobContext>(options
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
-//builder.Services.AddScoped<IJobManagementService, JobManagementService>();
-//builder.Services.AddHostedService<JobScheduler>();
+builder.Services.AddScoped<IDeadLetterRepository, DeadLetterRepository>();
+builder.Services.AddScoped<IRecurringJobRepository, RecurringJobRepository>();
+builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 
 builder.Services.AddCors(options =>
 {

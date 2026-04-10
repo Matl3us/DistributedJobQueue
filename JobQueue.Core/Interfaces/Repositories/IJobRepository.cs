@@ -6,9 +6,9 @@ namespace JobQueue.Core.Interfaces.Repositories;
 
 public interface IJobRepository
 {
-    Task<Job> Create(JobCreate jobCreate);
+    Job Add(JobCreate jobCreate);
     Task<Job> GetById(Guid jobId);
-    Task UpdateStatus(Guid jobId, JobStatus status, string? result = null);
+    void UpdateStatus(Job job, JobStatus status, string? result = null);
     Task<Dictionary<JobStatus, int>> GetCountByStatus();
     Task<IEnumerable<Job>> GetFailedPaginated(int page, int pageSize);
 }
