@@ -7,7 +7,7 @@ using JobQueue.Core.Models.DTOs.Responses;
 using JobQueue.Core.Models.Enums;
 using System.ComponentModel;
 
-namespace JobQueue.Infrastructure.Services;
+namespace JobQueue.Application.Services;
 
 public class JobManagementService(IJobRepository repository, IJobRedisQueueManagement redisQueue)
     : IJobManagementService

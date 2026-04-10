@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace JobQueue.Infrastructure.Worker;
+namespace JobQueue.Application.Workers;
 
 public class JobScheduler(IServiceProvider serviceProvider) : BackgroundService
 {
