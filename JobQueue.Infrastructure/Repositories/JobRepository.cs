@@ -25,6 +25,11 @@ public class JobRepository(JobContext context) : IJobRepository
         return result.Entity;
     }
 
+    public void AddError(JobError jobError)
+    {
+        context.JobErrors.Add(jobError);
+    }
+
     public async Task<Job> GetById(Guid jobId)
     {
         var job = await context.Jobs.SingleOrDefaultAsync(j => j.Id == jobId);

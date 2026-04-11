@@ -1,6 +1,5 @@
 ﻿using JobQueue.Core.Interfaces;
 using JobQueue.Core.Models.DTOs.JobPayloads;
-using JobQueue.Infrastructure.Messaging;
 using JobQueue.Worker.BackgroundServices;
 using JobQueue.Worker.Handlers;
 using JobQueue.Worker.Services;
@@ -11,8 +10,8 @@ public static class ServiceCollectionExtensions
 {
     public static void AddBackgroundServices(this IServiceCollection services)
     {
-        services.AddHostedService<OutboxProcessor>();
         services.AddHostedService<JobScheduler>();
+        services.AddHostedService<RabbitMqConsumer>();
     }
 
     public static void AddJobHandlers(this IServiceCollection services)

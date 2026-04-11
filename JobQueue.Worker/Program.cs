@@ -3,6 +3,7 @@ using JobQueue.Infrastructure.Extensions;
 using JobQueue.Infrastructure.Interfaces;
 using JobQueue.Worker.Configuration;
 using JobQueue.Worker.Extensions;
+using JobQueue.Worker.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -18,6 +19,8 @@ builder.Services.AddDbContext<JobContext>(options
 builder.Services.AddRabbitMqInfrastructure(builder.Configuration);
 builder.Services.AddRepositories();
 builder.Services.AddBackgroundServices();
+builder.Services.AddJobHandlers();
+builder.Services.AddScoped<IJobConsumer, JobConsumer>();
 
 var host = builder.Build();
 

@@ -18,7 +18,6 @@ public class HandlerRegistry : IHandlerRegistry
         AddHandler<ProcessImagePayload>(JobType.ProcessImage);
         AddHandler<DeliverWebhookPayload>(JobType.DeliverWebhook);
         _serviceProvider = serviceProvider;
-
     }
 
     public Task<JobResult> HandleAsync(JobType type, string payload, CancellationToken ct)

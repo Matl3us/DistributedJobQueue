@@ -5,6 +5,7 @@ using JobQueue.Core.Interfaces;
 using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Extensions;
 using JobQueue.Infrastructure.Interfaces;
+using JobQueue.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 
 var allowDashboardFetching = "AllowDashboardFetching";
@@ -20,6 +21,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddRabbitMqInfrastructure(builder.Configuration);
 builder.Services.AddRepositories();
 builder.Services.AddScoped<IJobManagementService, JobManagementService>();
+builder.Services.AddHostedService<OutboxProcessor>();
 
 builder.Services.AddCors(options =>
 {

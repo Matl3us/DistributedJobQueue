@@ -8,5 +8,5 @@ public class JobError
     public DateTime OccurredAt { get; set; }
 
     public Guid JobId { get; set; }
-    public required Job Job { get; set; }
+    public Job Job { get; set; }
 }
