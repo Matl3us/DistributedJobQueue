@@ -4,6 +4,7 @@ using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
 using JobQueue.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace JobQueue.Infrastructure.Repositories;
 
@@ -42,6 +43,22 @@ public class JobRepository(JobContext context) : IJobRepository
             .GroupBy(j => j.Status)
             .Select(g => new { Status = g.Key, TotalCount = g.Count() })
             .ToDictionaryAsync(k => k.Status, v => v.TotalCount);
+    }
+
+    public async Task<Job?> GetDueForRetryAndLock(int maxRetries)
+    {
+        var maxRetriesParam = new NpgsqlParameter("maxRetries", maxRetries);
+        var nowParam = new NpgsqlParameter("now", DateTime.UtcNow);
+        return await context.Jobs
+            .FromSql(
+                $$$"""
+                       SELECT * FROM public."Jobs" 
+                       WHERE "Status" = 3
+                       AND "RetryCount" < {{{maxRetriesParam}}}
+                       AND "NextRetryAt" <= {{{nowParam}}}
+                       FOR UPDATE SKIP LOCKED LIMIT 1
+                   """)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<IEnumerable<Job>> GetFailedPaginated(int page, int pageSize)

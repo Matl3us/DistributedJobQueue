@@ -9,6 +9,7 @@ public interface IJobRepository
     Job Add(JobCreate jobCreate);
     void AddError(JobError jobError);
     Task<Job> GetById(Guid jobId);
+    Task<Job?> GetDueForRetryAndLock(int maxRetries);
     void UpdateStatus(Job job, JobStatus status, string? result = null);
     Task<Dictionary<JobStatus, int>> GetCountByStatus();
     Task<IEnumerable<Job>> GetFailedPaginated(int page, int pageSize);

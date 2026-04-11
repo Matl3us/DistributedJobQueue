@@ -11,6 +11,7 @@ public static class ServiceCollectionExtensions
     public static void AddBackgroundServices(this IServiceCollection services)
     {
         services.AddHostedService<JobScheduler>();
+        services.AddHostedService<RetryScheduler>();
         services.AddHostedService<RabbitMqConsumer>();
     }
 
