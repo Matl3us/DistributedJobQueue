@@ -1,8 +1,9 @@
-﻿using JobQueue.Core.Models.Enums;
+﻿using JobQueue.Core.Models;
+using JobQueue.Core.Models.Enums;
 
 namespace JobQueue.Core.Interfaces;
 
 public interface IHandlerRegistry
 {
-    Task HandleAsync(JobType type, string payload, CancellationToken ct);
+    Task<JobResult> HandleAsync(JobType type, string payload, CancellationToken ct);
 }
