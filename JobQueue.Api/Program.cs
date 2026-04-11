@@ -1,8 +1,10 @@
 using JobQueue.Api.ExceptionHandlers;
 using JobQueue.Api.Extensions;
-using JobQueue.Application.BackgroundServices;
+using JobQueue.Application.Services;
+using JobQueue.Core.Interfaces;
 using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Extensions;
+using JobQueue.Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 var allowDashboardFetching = "AllowDashboardFetching";
@@ -17,9 +19,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddRabbitMqInfrastructure(builder.Configuration);
 builder.Services.AddRepositories();
-
-builder.Services.AddHostedService<JobScheduler>();
-builder.Services.AddHostedService<OutboxProcessor>();
+builder.Services.AddScoped<IJobManagementService, JobManagementService>();
 
 builder.Services.AddCors(options =>
 {
@@ -28,6 +28,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+var connectionManager = app.Services.GetRequiredService<IRabbitMqConnectionManager>();
+await connectionManager.InitializeAsync();
 
 app.UseExceptionHandler();
 

@@ -3,12 +3,9 @@ using JobQueue.Core.Interfaces.Repositories;
 using JobQueue.Core.Models;
 using JobQueue.Core.Models.DTOs;
 using JobQueue.Core.Models.Enums;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-namespace JobQueue.Application.BackgroundServices;
+namespace JobQueue.Worker.BackgroundServices;
 
 public class JobScheduler(IServiceProvider serviceProvider, ILogger<JobScheduler> logger) : BackgroundService
 {

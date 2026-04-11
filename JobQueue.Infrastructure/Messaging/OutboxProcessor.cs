@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-namespace JobQueue.Application.BackgroundServices;
+namespace JobQueue.Infrastructure.Messaging;
 
 public class OutboxProcessor(IServiceProvider serviceProvider,
     IJobPublisher jobPublisher,

@@ -28,7 +28,7 @@ public class RabbitMqConnectionManager(IOptions<RabbitMqOptions> options, ILogge
 
     public async Task<IChannel> CreateChannelAsync()
     {
-        if (_connection is null || _connection.IsOpen) throw new InvalidOperationException("Connection is not open");
+        if (_connection is null || !_connection.IsOpen) throw new InvalidOperationException("Connection is not open");
         return await _connection.CreateChannelAsync();
     }
 

@@ -1,6 +1,8 @@
 ﻿using JobQueue.Infrastructure.Database;
 using JobQueue.Infrastructure.Extensions;
+using JobQueue.Infrastructure.Interfaces;
 using JobQueue.Worker.Configuration;
+using JobQueue.Worker.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -14,10 +16,12 @@ builder.Services.AddDbContext<JobContext>(options
     => options.UseNpgsql(builder.Configuration.GetConnectionString("Database")));
 
 builder.Services.AddRabbitMqInfrastructure(builder.Configuration);
-
-//builder.Services.AddHostedService<JobProcessor>();
-//builder.Services.AddHostedService<StuckJobsDetector>();
-//builder.Services.AddHostedService<DroppedJobsDetector>();
+builder.Services.AddRepositories();
+builder.Services.AddBackgroundServices();
 
 var host = builder.Build();
+
+var connectionManager = host.Services.GetRequiredService<IRabbitMqConnectionManager>();
+await connectionManager.InitializeAsync();
+
 host.Run();

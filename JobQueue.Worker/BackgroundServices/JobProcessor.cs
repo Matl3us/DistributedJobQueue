@@ -9,7 +9,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace JobQueue.Worker.Workers;
+namespace JobQueue.Worker.BackgroundServices;
 
 public class JobProcessor(
     IServiceProvider serviceProvider,
