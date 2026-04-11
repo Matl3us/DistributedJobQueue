@@ -1,5 +1,4 @@
-﻿using JobQueue.Core.Interfaces;
-using JobQueue.Infrastructure.Database;
+﻿using JobQueue.Infrastructure.Database;
 using JobQueue.Worker.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -9,7 +8,6 @@ namespace JobQueue.Worker.Workers;
 
 public class DroppedJobsDetector(
     IServiceProvider serviceProvider,
-    IJobRedisQueueManagement redisQueue,
     IOptions<WorkerOptions> options) : BackgroundService
 {
     private readonly int _maxJobRetries = options.Value.MaxJobRetries;
@@ -41,7 +39,6 @@ public class DroppedJobsDetector(
                 continue;
             }
 
-            await redisQueue.EnqueueAsync(deletedJob.Id, deletedJob.Priority);
             deletedJob.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync(stoppingToken);
         }

@@ -1,5 +1,4 @@
-﻿using JobQueue.Core.Interfaces;
-using JobQueue.Core.Models.DTOs.JobPayloads;
+﻿using JobQueue.Core.Models.DTOs.JobPayloads;
 using JobQueue.Core.Models.Entities;
 using JobQueue.Core.Models.Enums;
 using JobQueue.Infrastructure.Database;
@@ -14,7 +13,6 @@ namespace JobQueue.Worker.Workers;
 
 public class JobProcessor(
     IServiceProvider serviceProvider,
-    IJobRedisQueueManagement redisQueue,
     ILogger<JobProcessor> logger,
     IOptions<WorkerOptions> options) : BackgroundService
 {
@@ -27,7 +25,8 @@ public class JobProcessor(
             await using var scope = serviceProvider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<JobContext>();
 
-            var pendingJob = await redisQueue.MoveToProcessingAsync();
+            //var pendingJob = await redisQueue.MoveToProcessingAsync();
+            var pendingJob = new Job();
 
             if (pendingJob is null)
             {
@@ -66,7 +65,7 @@ public class JobProcessor(
                 if (job.RetryCount < _maxJobRetries)
                 {
                     job.NextRetryAt = DateTime.UtcNow.AddSeconds(Math.Pow(2, job.RetryCount));
-                    await redisQueue.EnqueueAsync(job.Id, job.Priority);
+                    //await redisQueue.EnqueueAsync(job.Id, job.Priority);
 
                     logger.LogInformation($"Next retry for job: {job.Id} set at {job.NextRetryAt}");
                 }
@@ -86,7 +85,7 @@ public class JobProcessor(
             {
                 job.UpdatedAt = DateTime.UtcNow;
                 await context.SaveChangesAsync(stoppingToken);
-                await redisQueue.DequeueProcessingAsync(pendingJob);
+                //await redisQueue.DequeueProcessingAsync(pendingJob);
             }
         }
     }

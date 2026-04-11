@@ -17,9 +17,10 @@ public class OutboxRepository(JobContext context) : IOutboxRepository
         context.Outbox.Add(outbox);
     }
 
-    public async Task<IEnumerable<Outbox>> GetUnpublished()
+    public async Task<IEnumerable<Outbox>> GetUnpublishedAsync(int amount)
     {
         return await context.Outbox.Where(o => o.Published == false)
+            .Take(amount)
             .ToListAsync();
     }
 
