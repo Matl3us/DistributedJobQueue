@@ -69,10 +69,4 @@ public class JobRepository(JobContext context) : IJobRepository
             .Take(pageSize)
             .ToListAsync();
     }
-
-    public void UpdateStatus(Job job, JobStatus status, string? result = null)
-    {
-        job.Status = status;
-        if (result != null) job.Result = result;
-    }
 }

@@ -49,7 +49,6 @@ public class JobScheduler(IServiceProvider serviceProvider, ILogger<JobScheduler
 
                 recurringJobRepository.UpdateNextRun(recurringJob);
 
-                await unitOfWork.CommitAsync(stoppingToken);
                 await transaction.CommitAsync(stoppingToken);
             }
             catch (Exception ex)

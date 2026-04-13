@@ -13,11 +13,11 @@ public class HandlerRegistry : IHandlerRegistry
 
     public HandlerRegistry(IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         AddHandler<SendEmailPayload>(JobType.SendEmail);
         AddHandler<GeneratePdfPayload>(JobType.GeneratePdf);
         AddHandler<ProcessImagePayload>(JobType.ProcessImage);
         AddHandler<DeliverWebhookPayload>(JobType.DeliverWebhook);
-        _serviceProvider = serviceProvider;
     }
 
     public Task<JobResult> HandleAsync(JobType type, string payload, CancellationToken ct)

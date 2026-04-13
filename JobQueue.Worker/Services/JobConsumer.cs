@@ -37,16 +37,17 @@ public class JobConsumer(IServiceProvider serviceProvider,
 
             var job = await jobRepository.GetById(jobMsg.Id);
 
-            job.Status = JobStatus.Processing;
-            job.UpdatedAt = DateTime.UtcNow;
-            await unitOfWork.CommitAsync(ct);
-
             if (string.IsNullOrEmpty(job.Payload))
             {
                 await channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false, cancellationToken: ct);
                 logger.LogWarning("Empty payload for job with id: {Id}", jobMsg.Id);
                 return;
             }
+
+            job.Status = JobStatus.Processing;
+            job.UpdatedAt = DateTime.UtcNow;
+            await unitOfWork.CommitAsync(ct);
+
             var result = await registry.HandleAsync(job.Type, job.Payload, ct);
 
             if (!result.IsSuccess)

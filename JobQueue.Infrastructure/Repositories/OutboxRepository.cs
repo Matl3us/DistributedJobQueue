@@ -28,4 +28,12 @@ public class OutboxRepository(JobContext context) : IOutboxRepository
     {
         outbox.Published = true;
     }
+
+    public void Reset(Guid jobId)
+    {
+        var outbox = context.Outbox.SingleOrDefault(o => o.JobId == jobId);
+        if (outbox is null) return;
+        outbox.Published = false;
+        outbox.CreatedAt = DateTime.UtcNow;
+    }
 }

@@ -1,10 +1,8 @@
 ﻿using JobQueue.Core.Interfaces;
 using JobQueue.Core.Interfaces.Repositories;
-using JobQueue.Core.Models;
 using JobQueue.Core.Models.Enums;
 using JobQueue.Worker.Configuration;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 
 namespace JobQueue.Worker.BackgroundServices;
 
@@ -32,14 +30,7 @@ public class RetryScheduler(IServiceProvider serviceProvider,
                     continue;
                 }
 
-                var message = new JobMessage()
-                {
-                    Id = job.Id,
-                    Type = job.Type,
-                    Priority = job.Priority,
-                };
-                var payload = JsonSerializer.Serialize(message);
-                outboxRepository.Add(job.Id, payload);
+                outboxRepository.Reset(job.Id);
 
                 job.Status = JobStatus.Pending;
                 job.NextRetryAt = null;
