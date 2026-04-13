@@ -16,6 +16,7 @@ builder.Services.AddDbContext<JobContext>(options
     => options.UseNpgsql(builder.Configuration.GetConnectionString("Database")));
 
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddRabbitMqInfrastructure(builder.Configuration);

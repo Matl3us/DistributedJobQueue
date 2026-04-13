@@ -16,13 +16,21 @@ public static class RecurringJobEndpoints
                 return Results.Created($"/api/recurring-jobs/{recurringJob.Id}", recurringJob);
             });
 
-        routeBuilder.MapGet("/all",
+        routeBuilder.MapGet("/",
             async (IJobManagementService jobService,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 10) =>
             {
                 var recurringJobs = await jobService.GetRecurringJobsPaginated(page, pageSize);
                 return Results.Ok(recurringJobs);
+            });
+
+        routeBuilder.MapDelete("/{jobId}",
+            async ([FromRoute] Guid jobId,
+                IJobManagementService jobService) =>
+            {
+                await jobService.DeleteRecurringJob(jobId);
+                return Results.NoContent();
             });
 
         return routeBuilder;
