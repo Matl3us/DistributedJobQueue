@@ -12,6 +12,6 @@ public interface IJobManagementService
     Task<IEnumerable<FailedJobResponse>> GetFailedJobsPaginated(int page, int pageSize);
     Task<IEnumerable<FailedJobResponse>> GetDeadLetterQueueJobsPaginated(int page, int pageSize);
     Task<IEnumerable<RecurringJobResponse>> GetRecurringJobsPaginated(int page, int pageSize);
-    Task<bool> ScheduleRecurringJob();
+    Task DeleteRecurringJob(Guid recurringJobId);
     Task<bool> RetryJob(Guid jobId);
 }

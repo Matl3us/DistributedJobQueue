@@ -40,7 +40,7 @@ public static class JobEndpoints
                 return Results.Ok(failedJobs);
             });
 
-        routeBuilder.MapGet("/deadLetterQueue",
+        routeBuilder.MapGet("/dead-letter",
             async (IJobManagementService jobService,
                 [FromQuery] int page = 1,
                 [FromQuery] int pageSize = 10) =>

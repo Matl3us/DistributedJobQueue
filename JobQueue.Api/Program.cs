@@ -1,13 +1,12 @@
 using JobQueue.Api.ExceptionHandlers;
 using JobQueue.Api.Extensions;
+using JobQueue.Application.Services;
 using JobQueue.Core.Interfaces;
 using JobQueue.Infrastructure.Database;
-using JobQueue.Infrastructure.Repositories;
-using JobQueue.Infrastructure.Services;
-using JobQueue.Infrastructure.Worker;
+using JobQueue.Infrastructure.Extensions;
+using JobQueue.Infrastructure.Interfaces;
+using JobQueue.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
-using Serilog;
-using StackExchange.Redis;
 
 var allowDashboardFetching = "AllowDashboardFetching";
 
@@ -16,19 +15,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<JobContext>(options
     => options.UseNpgsql(builder.Configuration.GetConnectionString("Database")));
 
-builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
-    loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
-
 builder.Services.AddExceptionHandler<BadRequestExceptionHandler>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddRabbitMqInfrastructure(builder.Configuration);
+builder.Services.AddRepositories();
 builder.Services.AddScoped<IJobManagementService, JobManagementService>();
-builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
-builder.Services.AddSingleton<IJobRedisQueueManagement, JobRedisQueueManagement>();
-
-builder.Services.AddHostedService<JobScheduler>();
+builder.Services.AddHostedService<OutboxProcessor>();
 
 builder.Services.AddCors(options =>
 {
@@ -37,6 +31,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+var connectionManager = app.Services.GetRequiredService<IRabbitMqConnectionManager>();
+await connectionManager.InitializeAsync();
 
 app.UseExceptionHandler();
 
